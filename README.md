@@ -8,5 +8,5 @@ The project will first aim to detect advertising packets from tags and store the
 1. Open the .emProject file with an IDE that is not Segger embedded studio 
 2. Find and replace "../../../../../.." with $(SDK_ROOT:../../../../../..)
 3. Open SEGGER -> tools -> options -> building -> gloal macros 
-4. input SDK_ROOT=<SDK folder path with /, not \>
+4. write: "SDK_ROOT=<YOUR_PATH>/SDK"
 
