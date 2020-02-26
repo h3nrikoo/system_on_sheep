@@ -1,6 +1,3 @@
-
-
-
 /**
  * Copyright (c) 2016 - 2018, Nordic Semiconductor ASA
  *
@@ -59,6 +56,8 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+#include "sos_log.h"
+
 
 #define APP_BLE_CONN_CFG_TAG        1                                   /**< Tag that refers to the BLE stack configuration set with @ref sd_ble_cfg_set. The default tag is @ref BLE_CONN_CFG_TAG_DEFAULT. */
 #define APP_BLE_OBSERVER_PRIO       3                                   /**< BLE observer priority of the application. There is no need to modify this value. */
@@ -93,6 +92,7 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     app_error_handler(0xDEADBEEF, line_num, p_file_name);
 }
 
+volatile int cnt;
 
 #define SHEEP_TAG_ID 0xFFAABA //0xFF signals manufacture ID is coming, which is set to 0xBAAA 
 
@@ -157,6 +157,8 @@ static void print_state(logger_state_t state, sheep_packet_t info) {
     NRF_LOG_INFO("Btn2 +10m, Btn4 -10m");
 } 
 
+static sos_data_logger_t sos_logger;
+
 /**@brief Function for handling BLE events.
  *
  * @param[in]   p_ble_evt   Bluetooth stack event.
@@ -185,10 +187,21 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             sheep_info.isCoded_phy = logger_state.isCoded_phy; 
             sheep_info.distance_m = logger_state.distance_m; 
 
+            sos_measurement_t measurement = {
+                .tag_id = sheep_info.id,
+                .adv_interval = sheep_info.adv_interval,
+                .TXpower = sheep_info.TXpower,
+                .rssi = sheep_info.rssi,
+                .received_phy = sheep_info.received_phy,
+                .distance_m = sheep_info.distance_m
+            };
+            int err = sos_log_measurement(&sos_logger, measurement);
+
             print_state(logger_state, sheep_info);  
         }  
         // Continue scanning.
         sd_ble_gap_scan_start(NULL, &m_scan_buffer);
+
     }
 }
 
@@ -262,6 +275,7 @@ void bsp_event_callback(bsp_event_t event)
             } else {
                 APP_ERROR_CHECK(sd_ble_gap_scan_stop());
                 print_state(logger_state, sheep_info);
+                sos_logger.save_flag = true;
             }
             break;
         }
@@ -300,9 +314,16 @@ void bsp_event_callback(bsp_event_t event)
     }
 }
 
+
 static void btns_init(void)
 {
     ret_code_t err_code = bsp_init(BSP_INIT_BUTTONS, bsp_event_callback);
+    APP_ERROR_CHECK(err_code);
+}
+
+static void timers_init(void)
+{
+    ret_code_t err_code = app_timer_init();
     APP_ERROR_CHECK(err_code);
 }
 
@@ -325,19 +346,19 @@ int main(void)
     ble_stack_init();
     timer_init();
     btns_init();
+    sos_logger = sos_init();
 
-    // Start scanning.
     NRF_LOG_INFO("----INPUT MODE----"); 
     NRF_LOG_INFO("1 Msym/s, 0 m");
     NRF_LOG_INFO("Btn1 toggle logger/input mode");
     NRF_LOG_INFO("Btn3 toggle 1 Msym/s and 125 ksym/s"); 
     NRF_LOG_INFO("Btn2 +10m, Btn4 -10m")
 
-    //scan_start(isCoded_phy);
 
     // Enter main loop.
     for (;;)
     {
         NRF_LOG_PROCESS();
+        check_and_save(&sos_logger);
     }
 }
