@@ -64,7 +64,7 @@
  
 
 #ifndef BSP_BTN_BLE_ENABLED
-#define BSP_BTN_BLE_ENABLED 1
+#define BSP_BTN_BLE_ENABLED 0
 #endif
 
 // </h> 
@@ -6302,7 +6302,7 @@
 // <31=> 1024 Hz 
 
 #ifndef APP_TIMER_CONFIG_RTC_FREQUENCY
-#define APP_TIMER_CONFIG_RTC_FREQUENCY 1
+#define APP_TIMER_CONFIG_RTC_FREQUENCY 31
 #endif
 
 // <o> APP_TIMER_CONFIG_IRQ_PRIORITY  - Interrupt priority
@@ -6346,7 +6346,7 @@
 // <i> This option can be used when app_timer is used for timestamping.
 
 #ifndef APP_TIMER_KEEPS_RTC_ACTIVE
-#define APP_TIMER_KEEPS_RTC_ACTIVE 0
+#define APP_TIMER_KEEPS_RTC_ACTIVE 1
 #endif
 
 // <o> APP_TIMER_SAFE_WINDOW_MS - Maximum possible latency (in milliseconds) of handling app_timer event. 

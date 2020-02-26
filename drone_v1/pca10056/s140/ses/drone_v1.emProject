@@ -89,7 +89,9 @@
     </folder>
     <folder Name="Board Support">
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/bsp/bsp.c" />
-      <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/bsp/bsp_btn_ble.c" />
+      <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/bsp/bsp_btn_ble.c">
+        <configuration Name="Debug" build_exclude_from_build="Yes" />
+      </file>
     </folder>
     <folder Name="Application">
       <file file_name="../../../main.c" />
