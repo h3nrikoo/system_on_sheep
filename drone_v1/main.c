@@ -722,17 +722,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
                     .received_phy = sheep_info.received_phy,
                     .distance_m = sheep_info.distance_m
                 };
-                NRF_LOG_INFO("Going to log.");
-                sos_log_measurement(&sos_logger, measurement);
-                NRF_LOG_INFO("Done logging.");
-                NRF_LOG_INFO("This is %i", cnt);
-                cnt++;
-                if (cnt >= 4) {
-                    NRF_LOG_INFO("Going to save log.");
-                    sos_save_log(&sos_logger);
-                    sos_logger.current_log_id++;
-                    cnt = 0;
-                }
+                int err = sos_log_measurement(&sos_logger, measurement);
+                if (err) sos_logger.save_flag =
                 NRF_LOG_INFO("-----SHEEP INFO-----");
                 NRF_LOG_INFO("SHEEP ID:\t\t\t%u", sheep_info.id);
                 NRF_LOG_INFO("ADVERTISING INTERVAL:\t%ums", sheep_info.adv_interval); 
@@ -831,7 +822,7 @@ void bsp_event_callback(bsp_event_t event)
     {
         case BSP_EVENT_KEY_0:
         {
-            
+            sos_logger.save_flag = true;
             break;
         }
         case BSP_EVENT_KEY_1:
@@ -856,9 +847,16 @@ void bsp_event_callback(bsp_event_t event)
     }
 }
 
+
 static void btns_init(void)
 {
     ret_code_t err_code = bsp_init(BSP_INIT_BUTTONS, bsp_event_callback);
+    APP_ERROR_CHECK(err_code);
+}
+
+static void timers_init(void)
+{
+    ret_code_t err_code = app_timer_init();
     APP_ERROR_CHECK(err_code);
 }
 
@@ -871,17 +869,18 @@ int main(void)
     // Initialize.
     log_init();
     ble_stack_init();
+    timers_init();
     btns_init(); 
 
     // Start scanning.
     NRF_LOG_INFO("BLE active scanner started.");
-    sos_logger = sos_init(false);
-    cnt = 0;
+    sos_logger = sos_init();
     scan_start();
 
     // Enter main loop.
     for (;;)
     {
         NRF_LOG_PROCESS();
+        check_and_save(&sos_logger);
     }
 }

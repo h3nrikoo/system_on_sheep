@@ -24,32 +24,23 @@ void sos_clear_log(sos_data_logger_t* logger) {
 }
 
 int sos_log_measurement(sos_data_logger_t* logger, sos_measurement_t measurement) {
-
-    NRF_LOG_INFO("Logging.");
     if (logger->n_measurements < SOS_MAX_LOG_ELEMENTS) {
         logger->measurements[logger->n_measurements] = measurement;
         logger->n_measurements++;
         return SOS_LOG_STATUS_OK;
     }
-
-    if (logger->save_when_full) {
-        int save_status = sos_save_log(logger);
-        if (save_status) return SOS_LOG_STATUS_FAILED;
-        sos_clear_log(logger);
-        return SOS_LOG_STATUS_SAVED;
-    }
     return SOS_LOG_STATUS_FULL;
 }
 
 int get_last_save_id() {
-    return 1;
+    return 0;
 }
 
-sos_data_logger_t sos_init(bool save_when_full) {
+sos_data_logger_t sos_init() {
     sos_data_logger_t logger = {
-        .save_when_full = save_when_full,
         .current_log_id = get_last_save_id() + 1,
         .n_measurements = 0,
+        .save_flag = false,
         .measurements = {}
     };
 
@@ -57,10 +48,7 @@ sos_data_logger_t sos_init(bool save_when_full) {
 }
 
 int sos_save_log(sos_data_logger_t* logger) {
-    NRF_LOG_INFO("---------------.");
-    NRF_LOG_INFO("---------------.");
-    NRF_LOG_INFO("Saving Log.");
-
+    NRF_LOG_INFO("Saving");
     FATFS fs;
     DIR dir;
     FILINFO fno;
@@ -69,7 +57,6 @@ int sos_save_log(sos_data_logger_t* logger) {
     uint32_t bytes_written;
     DSTATUS disk_state = STA_NOINIT;
    
-
     static diskio_blkdev_t drives[] =
     {
             DISKIO_BLOCKDEV_CONFIG(NRF_BLOCKDEV_BASE_ADDR(m_block_dev_sdc, block_dev), NULL)
@@ -83,42 +70,54 @@ int sos_save_log(sos_data_logger_t* logger) {
     }
     if (disk_state)
     {
+        NRF_LOG_INFO("Failed Disk Init");
         return SOS_SAVE_STATUS_FAILED;
     }
 
-//    ff_result = f_mount(&fs, "", 1);
-//    if (ff_result)
-//    {
-//        return SOS_SAVE_STATUS_FAILED;
-//    }
-//
-//    char file_name[10];
-//    snprintf(file_name, 10, "sos%03d.csv", logger->current_log_id);
-//    ff_result = f_open(&file, file_name, FA_READ | FA_WRITE | FA_OPEN_APPEND);
-//    if (ff_result != FR_OK)
-//    {
-//        NRF_LOG_INFO("Unable to open or create file.");
-//        return SOS_SAVE_STATUS_FAILED;
-//    }
-//    for (int i = 0; i < logger->n_measurements; i++) {
-//        char log_buffer[100] = "                                                                                                    ";
-//        sos_measurement_t measurement = logger->measurements[i];
-//        int length = snprintf(
-//            log_buffer, 
-//            100, 
-//            "%d;%d;%d;%d;%d;%d\n", 
-//            measurement.tag_id, 
-//            measurement.adv_interval, 
-//            measurement.TXpower, 
-//            measurement.rssi, 
-//            measurement.received_phy,
-//            measurement.distance_m
-//            );
-//        //sprintf(write_string, "%d;%d;%d\n", logger->measurements[i].tag_id, logger->measurements[i].rssi, logger->measurements[i].distance);
-//        ff_result = f_write(&file, log_buffer, length, (UINT *) &bytes_written);
-//        if (ff_result) return SOS_SAVE_STATUS_FAILED;
-//    }
-//    
-//    (void) f_close(&file);
+    ff_result = f_mount(&fs, "", 1);
+    if (ff_result)
+    {
+        NRF_LOG_INFO("Failed Disk Mount");
+        return SOS_SAVE_STATUS_FAILED;
+    }
+
+    char file_name[11];
+    snprintf(file_name, 11, "sos%03d.csv", logger->current_log_id);
+    ff_result = f_open(&file, file_name, FA_READ | FA_WRITE | FA_OPEN_APPEND);
+    if (ff_result != FR_OK)
+    {
+        NRF_LOG_INFO("Failed File Open");
+        return SOS_SAVE_STATUS_FAILED;
+    }
+    for (int i = 0; i < logger->n_measurements; i++) {
+        char log_buffer[100] = "                                                                                                    ";
+        sos_measurement_t measurement = logger->measurements[i];
+        int length = snprintf(
+            log_buffer, 
+            100, 
+            "%d;%d;%d;%d;%d;%d\n", 
+            measurement.tag_id, 
+            measurement.adv_interval, 
+            measurement.TXpower, 
+            measurement.rssi, 
+            measurement.received_phy,
+            measurement.distance_m
+            );
+        ff_result = f_write(&file, log_buffer, length, (UINT *) &bytes_written);
+        if (ff_result) {
+            NRF_LOG_INFO("Write failed");
+            return SOS_SAVE_STATUS_FAILED;
+        }
+    }
+    (void) f_close(&file);
+    logger->current_log_id++;
     return SOS_SAVE_STATUS_OK;
+}
+
+void check_and_save(sos_data_logger_t* logger) {
+    if (logger->save_flag) {
+        sos_save_log(logger);
+        sos_clear_log(logger);
+        logger->save_flag = false;
+    }
 }
