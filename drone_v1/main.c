@@ -586,6 +586,8 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+#include "sos_log.h"
+
 
 #define APP_BLE_CONN_CFG_TAG        1                                   /**< Tag that refers to the BLE stack configuration set with @ref sd_ble_cfg_set. The default tag is @ref BLE_CONN_CFG_TAG_DEFAULT. */
 #define APP_BLE_OBSERVER_PRIO       3                                   /**< BLE observer priority of the application. There is no need to modify this value. */
@@ -620,6 +622,7 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     app_error_handler(0xDEADBEEF, line_num, p_file_name);
 }
 
+volatile int cnt;
 
 //shit code that needs to be replaced lol 
 static int8_t convert_adv_txpower(uint8_t txpower) {
@@ -670,7 +673,7 @@ static int8_t convert_adv_txpower(uint8_t txpower) {
 }
 
 
-#define SHEEP_TAG_ID 0xFFAABA //0xFF signals manufacture ID is coming, which is set to 0xBAAA 
+#define SHEEP_TAG_ID 0xFFABBA //0xFF signals manufacture ID is coming, which is set to 0xBAAA 
 
 typedef struct 
 {
@@ -683,6 +686,8 @@ typedef struct
 }sheep_packet_t;
 
 static sheep_packet_t sheep_info; 
+
+static sos_data_logger_t sos_logger;
 
 /**@brief Function for handling BLE events.
  *
@@ -709,7 +714,25 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
                 sheep_info.rssi = p_adv_report->rssi; 
                 sheep_info.received_phy = p_adv_report->primary_phy; 
                
-
+                sos_measurement_t measurement = {
+                    .tag_id = sheep_info.id,
+                    .adv_interval = sheep_info.adv_interval,
+                    .TXpower = sheep_info.TXpower,
+                    .rssi = sheep_info.rssi,
+                    .received_phy = sheep_info.received_phy,
+                    .distance_m = sheep_info.distance_m
+                };
+                NRF_LOG_INFO("Going to log.");
+                sos_log_measurement(&sos_logger, measurement);
+                NRF_LOG_INFO("Done logging.");
+                NRF_LOG_INFO("This is %i", cnt);
+                cnt++;
+                if (cnt >= 4) {
+                    NRF_LOG_INFO("Going to save log.");
+                    sos_save_log(&sos_logger);
+                    sos_logger.current_log_id++;
+                    cnt = 0;
+                }
                 NRF_LOG_INFO("-----SHEEP INFO-----");
                 NRF_LOG_INFO("SHEEP ID:\t\t\t%u", sheep_info.id);
                 NRF_LOG_INFO("ADVERTISING INTERVAL:\t%ums", sheep_info.adv_interval); 
@@ -852,6 +875,8 @@ int main(void)
 
     // Start scanning.
     NRF_LOG_INFO("BLE active scanner started.");
+    sos_logger = sos_init(false);
+    cnt = 0;
     scan_start();
 
     // Enter main loop.
