@@ -68,8 +68,8 @@
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/experimental_section_vars/nrf_section_iter.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/sortlist/nrf_sortlist.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/strerror/nrf_strerror.c" />
-      <file file_name="C:/Master/Nordic/SDK/components/libraries/block_dev/sdc/nrf_block_dev_sdc.c" />
-      <file file_name="C:/Master/Nordic/SDK/components/libraries/sdcard/app_sdcard.c" />
+      <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/block_dev/sdc/nrf_block_dev_sdc.c" />
+      <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/sdcard/app_sdcard.c" />
     </folder>
     <folder Name="None">
       <file file_name="$(SDK_ROOT:../../../../../..)/modules/nrfx/mdk/ses_startup_nrf52840.s" />
@@ -88,8 +88,8 @@
       <file file_name="$(SDK_ROOT:../../../../../..)/modules/nrfx/drivers/src/prs/nrfx_prs.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/modules/nrfx/drivers/src/nrfx_uart.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/modules/nrfx/drivers/src/nrfx_uarte.c" />
-      <file file_name="C:/Master/Nordic/SDK/integration/nrfx/legacy/nrf_drv_spi.c" />
-      <file file_name="C:/Master/Nordic/SDK/modules/nrfx/drivers/src/nrfx_spim.c" />
+      <file file_name="$(SDK_ROOT:../../../../../..)/integration/nrfx/legacy/nrf_drv_spi.c" />
+      <file file_name="$(SDK_ROOT:../../../../../..)/nrfx/drivers/src/nrfx_spim.c" />
     </folder>
     <folder Name="Board Support">
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/bsp/bsp.c" />
@@ -127,8 +127,8 @@
       <file file_name="$(SDK_ROOT:../../../../../..)/components/softdevice/common/nrf_sdh_soc.c" />
     </folder>
     <folder Name="FATFS">
-      <file file_name="C:/Master/Nordic/SDK/external/fatfs/port/diskio_blkdev.c" />
-      <file file_name="C:/Master/Nordic/SDK/external/fatfs/src/ff.c" />
+      <file file_name="$(SDK_ROOT:../../../../../..)/external/fatfs/port/diskio_blkdev.c" />
+      <file file_name="$(SDK_ROOT:../../../../../..)/external/fatfs/src/ff.c" />
     </folder>
   </project>
   <configuration
