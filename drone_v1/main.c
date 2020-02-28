@@ -92,7 +92,6 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     app_error_handler(0xDEADBEEF, line_num, p_file_name);
 }
 
-volatile int cnt;
 
 #define SHEEP_TAG_ID 0xFFAABA //0xFF signals manufacture ID is coming, which is set to 0xBAAA 
 
@@ -159,6 +158,16 @@ static void print_state(logger_state_t state, sheep_packet_t info) {
 
 static sos_data_logger_t sos_logger;
 
+void log_sheepinfo() {
+    sos_measurement_t measurement = {
+        .tx_power = sheep_info.TXpower,
+        .rssi = sheep_info.rssi,
+        .height = sheep_info.height,
+        .rotation = sheep_info.rotation
+    };
+    int err = sos_log_measurement(&sos_logger, measurement);
+}
+
 /**@brief Function for handling BLE events.
  *
  * @param[in]   p_ble_evt   Bluetooth stack event.
@@ -186,17 +195,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             sheep_info.rssi = p_adv_report->rssi; 
             sheep_info.isCoded_phy = logger_state.isCoded_phy; 
             sheep_info.distance_m = logger_state.distance_m; 
-
-            sos_measurement_t measurement = {
-                .tag_id = sheep_info.id,
-                .adv_interval = sheep_info.adv_interval,
-                .TXpower = sheep_info.TXpower,
-                .rssi = sheep_info.rssi,
-                .received_phy = sheep_info.received_phy,
-                .distance_m = sheep_info.distance_m
-            };
-            int err = sos_log_measurement(&sos_logger, measurement);
-
+            log_sheepinfo();
             print_state(logger_state, sheep_info);  
         }  
         // Continue scanning.
@@ -359,6 +358,8 @@ int main(void)
     for (;;)
     {
         NRF_LOG_PROCESS();
+        sos_logger.is_coded_phy = logger_state.isCoded_phy;
+        sos_logger.distance_m = logger_state.distance_m;
         check_and_save(&sos_logger);
     }
 }

@@ -81,27 +81,42 @@ int sos_save_log(sos_data_logger_t* logger) {
         return SOS_SAVE_STATUS_FAILED;
     }
 
-    char file_name[11];
-    snprintf(file_name, 11, "sos%03d.csv", logger->current_log_id);
+    char file_name[12];
+    snprintf(file_name, 13, "S%02d%s%04d.csv", logger->current_log_id, logger->is_coded_phy ? "Y" : "N", logger->distance_m);
+    NRF_LOG_INFO("%s", file_name);
     ff_result = f_open(&file, file_name, FA_READ | FA_WRITE | FA_OPEN_APPEND);
     if (ff_result != FR_OK)
     {
         NRF_LOG_INFO("Failed File Open");
         return SOS_SAVE_STATUS_FAILED;
     }
+
+    char log_buffer[100] = "                                                                                                    ";
+    int l = snprintf(
+        log_buffer,
+        100,
+        "# Distance: %i m. Using coded phy: %s\n",
+        logger->distance_m,
+        logger->is_coded_phy ? "Yes" : "No"
+    );
+
+    ff_result = f_write(&file, log_buffer, l, (UINT *) &bytes_written);
+    if (ff_result) {
+        NRF_LOG_INFO("Write failed");
+        return SOS_SAVE_STATUS_FAILED;
+    }
+
     for (int i = 0; i < logger->n_measurements; i++) {
         char log_buffer[100] = "                                                                                                    ";
         sos_measurement_t measurement = logger->measurements[i];
         int length = snprintf(
             log_buffer, 
             100, 
-            "%d;%d;%d;%d;%d;%d\n", 
-            measurement.tag_id, 
-            measurement.adv_interval, 
-            measurement.TXpower, 
+            "%d;%d;%d;%d\n", 
+            measurement.tx_power, 
             measurement.rssi, 
-            measurement.received_phy,
-            measurement.distance_m
+            measurement.height,
+            measurement.rotation
             );
         ff_result = f_write(&file, log_buffer, length, (UINT *) &bytes_written);
         if (ff_result) {
@@ -110,7 +125,6 @@ int sos_save_log(sos_data_logger_t* logger) {
         }
     }
     (void) f_close(&file);
-    logger->current_log_id++;
     return SOS_SAVE_STATUS_OK;
 }
 
@@ -119,5 +133,6 @@ void check_and_save(sos_data_logger_t* logger) {
         sos_save_log(logger);
         sos_clear_log(logger);
         logger->save_flag = false;
+        logger->current_log_id++;
     }
 }

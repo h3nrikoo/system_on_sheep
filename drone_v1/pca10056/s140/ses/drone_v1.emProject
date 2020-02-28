@@ -89,7 +89,7 @@
       <file file_name="$(SDK_ROOT:../../../../../..)/modules/nrfx/drivers/src/nrfx_uart.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/modules/nrfx/drivers/src/nrfx_uarte.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/integration/nrfx/legacy/nrf_drv_spi.c" />
-      <file file_name="$(SDK_ROOT:../../../../../..)/nrfx/drivers/src/nrfx_spim.c" />
+      <file file_name="$(SDK_ROOT:../../../../../..)/modules/nrfx/drivers/src/nrfx_spim.c" />
     </folder>
     <folder Name="Board Support">
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/bsp/bsp.c" />
@@ -101,6 +101,9 @@
       <file file_name="../../../main.c" />
       <file file_name="../config/sdk_config.h" />
       <file file_name="../../../sos_log.c" />
+      <file file_name="../../../sos_gps.c" />
+      <file file_name="../../../sos_gps.h" />
+      <file file_name="../../../sos_log.h" />
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="$(SDK_ROOT:../../../../../..)/external/segger_rtt/SEGGER_RTT.c" />
