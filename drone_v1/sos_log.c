@@ -130,6 +130,7 @@ int sos_save_log(sos_data_logger_t* logger) {
 
 void check_and_save(sos_data_logger_t* logger) {
     if (logger->save_flag) {
+        NRF_LOG_INFO("Num measurements saved: %i", logger->n_measurements);
         sos_save_log(logger);
         sos_clear_log(logger);
         logger->save_flag = false;

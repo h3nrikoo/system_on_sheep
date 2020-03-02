@@ -179,6 +179,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     ble_gap_evt_adv_report_t const * p_adv_report = &p_ble_evt->evt.gap_evt.params.adv_report;
 
     static uint32_t manufacture_id;
+    static uint32_t counter = 0;
  
     if(p_ble_evt->header.evt_id == BLE_GAP_EVT_ADV_REPORT){
 
@@ -196,7 +197,11 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             sheep_info.isCoded_phy = logger_state.isCoded_phy; 
             sheep_info.distance_m = logger_state.distance_m; 
             log_sheepinfo();
-            print_state(logger_state, sheep_info);  
+            counter++;
+            if (counter > 50) {
+                print_state(logger_state, sheep_info);  
+                counter = 0;
+            }
         }  
         // Continue scanning.
         sd_ble_gap_scan_start(NULL, &m_scan_buffer);
