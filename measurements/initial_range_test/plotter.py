@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import os
 from collections import namedtuple
-import numpy as np
 import pandas as pd
-
+import seaborn as sns
+import math
 DATA_DIRECTORY = "data/"
 
 Measurement = namedtuple("Measurement", ['distance', 'coded_phy', 'tx_power', 'rssi', 'height', 'angle'])
@@ -42,4 +42,50 @@ for file in files:
 
             measurements.append(Measurement(distance, coded_phy, tx_power, rssi, height, angle))
 
-print(measurements)
+df = pd.DataFrame(measurements)
+
+
+def plot_angles(coded_phy):
+    df2 = df.groupby(['distance', 'coded_phy', 'angle']).size().reset_index().rename(columns={0: 'records'})
+    df2['records'] = df2['records'] / (100 * 8 * 2)
+    plt.figure()
+    ax = sns.barplot(palette='Paired', data=df2[df2['coded_phy'] == coded_phy], x='distance', y='records', hue='angle')
+    ax.set(xlabel='Distance (m)', ylabel='Packet Ratio')
+    ax.set_title("Angles")
+    plt.legend(title="Angle", loc="upper right")
+    plt.show()
+
+
+def plot_0dbm():
+    df2 = df[df["tx_power"] == 4]
+    df2 = df2.groupby(['distance', 'coded_phy']).size().reset_index().rename(columns={0: 'records'})
+    df2['records'] = df2['records'] / (100 * 1 * 2 * 3)
+    plt.figure()
+    ax = sns.barplot(palette='Paired', data=df2, x='distance', y='records', hue='coded_phy')
+    ax.set(xlabel='Distance (m)', ylabel='Packet Ratio')
+    ax.set_title("Coded Phy")
+    plt.legend(title="Using Coded Phy", loc="upper right")
+    plt.savefig("4dbm.svg")
+    plt.show()
+
+
+def friis(d):
+    return 10 * math.log(((0.125/(4 * math.pi*d))**2), 10)
+
+
+def plot_rssi():
+    df2 = df[df["tx_power"] == 0]
+    df2 = df2[df2["height"] == 200]
+    df2 = df2[df2["angle"] == 90]
+    df2 = df2.groupby(['distance'])['rssi'].mean().reset_index()
+    plt.figure()
+    ax = sns.lineplot(palette='Paired', data=df2, x='distance', y='rssi')
+    ax.set(xlabel='Distance (m)', ylabel='RSSI')
+    ax.set_title("RSSI")
+
+    plt.plot(df2['distance'], [friis(d) for d in df2['distance']])
+
+    plt.show()
+
+
+plot_rssi()
