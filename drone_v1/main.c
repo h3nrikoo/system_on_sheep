@@ -55,6 +55,9 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+#include "nrf_serial.h"
+#include "nrf_drv_clock.h"
+#include "nrf_drv_power.h"
 
 #include "sos_log.h"
 
@@ -67,6 +70,95 @@
 
 static ble_gap_scan_params_t m_scan_param;                                /**< Scan parameters requested for scanning and connection. */
 static uint8_t               m_scan_buffer_data[BLE_GAP_SCAN_BUFFER_EXTENDED_MIN]; /**< buffer where advertising reports will be stored by the SoftDevice. */
+
+#define SHEEP_TAG_ID 0xFFAABA //0xFF signals manufacture ID is coming, which is set to 0xBAAA 
+
+typedef enum {LOW_70CM = 0, HIGH_2M}M_HEIGHT; 
+typedef enum {DEG90 = 0, DEG45, DEG0}M_ROTATION; 
+
+static int8_t tx_power_dBm[] = {-20, -16, -12, -8, -4, 0, 3, 4};
+
+typedef struct 
+{
+    int8_t TXpower; 
+    int8_t rssi; 
+    bool isCoded_phy;
+    M_HEIGHT height; 
+    M_ROTATION rotation; 
+    uint16_t distance_m; 
+}sheep_packet_t;
+
+static sheep_packet_t sheep_info; //init 
+
+typedef struct {
+    bool isCoded_phy;
+    bool isLogging; 
+}logger_state_t; 
+
+logger_state_t logger_state = {true, false, 0}; //init 
+
+static sos_log_logger_t sos_logger;
+
+#define OP_QUEUES_SIZE          3
+#define APP_TIMER_PRESCALER     NRF_SERIAL_APP_TIMER_PRESCALER
+
+NRF_SERIAL_DRV_UART_CONFIG_DEF(m_uarte1_drv_config,
+                      ARDUINO_1_PIN, ARDUINO_0_PIN,
+                      ARDUINO_2_PIN, ARDUINO_3_PIN,
+                      NRF_UART_HWFC_DISABLED, NRF_UART_PARITY_EXCLUDED,
+                      NRF_UART_BAUDRATE_9600,
+                      UART_DEFAULT_CONFIG_IRQ_PRIORITY);
+
+
+#define SERIAL_FIFO_TX_SIZE 64
+#define SERIAL_FIFO_RX_SIZE 64
+
+NRF_SERIAL_QUEUES_DEF(serial1_queues, SERIAL_FIFO_TX_SIZE, SERIAL_FIFO_RX_SIZE);
+
+
+#define SERIAL_BUFF_TX_SIZE 1
+#define SERIAL_BUFF_RX_SIZE 1
+
+static char nmea[200] = "";
+static int nmea_len = 0;
+static void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_serial_event_t event) {
+    if (event == NRF_SERIAL_EVENT_RX_DATA) {
+        char c[32];
+        size_t read = 0;
+        ret_code_t ret = nrf_serial_read(p_serial, &c, sizeof(char)*32, &read, 0);
+        static char a;
+        static char b;
+        for (size_t i = 0; i < read; i++) {
+            b = a;
+            a = c[i];
+            nmea[nmea_len] = a;
+            nmea_len++;
+            if (a == '\n' && b == '\r') {
+                if (logger_state.isLogging) {
+                    sos_log_nmea(&sos_logger, nmea, nmea_len);
+                }
+                nmea_len = 0;
+            }
+        }
+    } else if (event == NRF_SERIAL_EVENT_FIFO_ERR ) {
+        NRF_LOG_ERROR("NRF_SERIAL_EVENT_FIFO_ERR\n");
+    } else if (event == NRF_SERIAL_EVENT_DRV_ERR  ) {
+        NRF_LOG_ERROR("NRF_SERIAL_EVENT_DRV_ERR\n");
+        if (sos_logger.n_total_measurements > 0) {
+            sos_logger.save_flag = true;
+        } else if (!sos_logger.save_flag) {
+            sd_nvic_SystemReset();
+        }
+    }
+}
+
+NRF_SERIAL_BUFFERS_DEF(serial1_buffs, SERIAL_BUFF_TX_SIZE, SERIAL_BUFF_RX_SIZE);
+
+NRF_SERIAL_CONFIG_DEF(serial1_config, NRF_SERIAL_MODE_DMA,
+                      &serial1_queues, &serial1_buffs, serial_event_handler, NULL);
+
+NRF_SERIAL_UART_DEF(serial1_uarte, 1);
+
 
 /**@brief Pointer to the buffer where advertising reports will be stored by the SoftDevice. */
 static ble_data_t m_scan_buffer =
@@ -92,34 +184,6 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     app_error_handler(0xDEADBEEF, line_num, p_file_name);
 }
 
-
-#define SHEEP_TAG_ID 0xFFAABA //0xFF signals manufacture ID is coming, which is set to 0xBAAA 
-
-typedef enum {LOW_70CM = 0, HIGH_2M}M_HEIGHT; 
-typedef enum {DEG90 = 0, DEG45, DEG0}M_ROTATION; 
-
-static int8_t tx_power_dBm[] = {-20, -16, -12, -8, -4, 0, 3, 4};
-
-typedef struct 
-{
-    int8_t TXpower; 
-    int8_t rssi; 
-    bool isCoded_phy;
-    M_HEIGHT height; 
-    M_ROTATION rotation; 
-    uint16_t distance_m; 
-}sheep_packet_t;
-
-static sheep_packet_t sheep_info; //init 
-
-typedef struct {
-    bool isCoded_phy;
-    bool isLogging; 
-    uint16_t distance_m; 
-}logger_state_t; 
-
-logger_state_t logger_state = {false, false, 0}; //init 
-
 static void print_state(logger_state_t state, sheep_packet_t info) {
     if(state.isLogging) {
          NRF_LOG_INFO("---LOGGING MODE---"); 
@@ -137,10 +201,9 @@ static void print_state(logger_state_t state, sheep_packet_t info) {
         } else {
         NRF_LOG_INFO("ROTATION:\t\t\t0 DEG");
         }
-        NRF_LOG_INFO("DISTANCE:\t\t\t%um", state.distance_m); 
         return; 
-    } 
-
+    }
+    
     char *str_sym; 
 
     if(state.isCoded_phy) {
@@ -150,22 +213,20 @@ static void print_state(logger_state_t state, sheep_packet_t info) {
     }
 
     NRF_LOG_INFO("----INPUT MODE----"); 
-    NRF_LOG_INFO("%s, %u m", (uint32_t)str_sym, state.distance_m);
+    NRF_LOG_INFO("%s", (uint32_t)str_sym);
     NRF_LOG_INFO("Btn1 toggle logger/input mode");
     NRF_LOG_INFO("Btn3 toggle 1 Msym/s and 125 ksym/s"); 
-    NRF_LOG_INFO("Btn2 +10m, Btn4 -10m");
 } 
 
-static sos_data_logger_t sos_logger;
 
 void log_sheepinfo() {
-    sos_measurement_t measurement = {
+    sos_radio_measurement_t measurement = {
         .tx_power = sheep_info.TXpower,
         .rssi = sheep_info.rssi,
         .height = sheep_info.height,
         .rotation = sheep_info.rotation
     };
-    int err = sos_log_measurement(&sos_logger, measurement);
+    int err = sos_log_radio_measurement(&sos_logger, measurement);
 }
 
 /**@brief Function for handling BLE events.
@@ -194,7 +255,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             sheep_info.rotation = p_adv_report->data.p_data[9]; 
             sheep_info.rssi = p_adv_report->rssi; 
             sheep_info.isCoded_phy = logger_state.isCoded_phy; 
-            sheep_info.distance_m = logger_state.distance_m; 
             log_sheepinfo();
             print_state(logger_state, sheep_info);  
         }  
@@ -229,17 +289,6 @@ static void ble_stack_init(void)
     // Register a handler for BLE events.
     NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
 }
-
-
-/**@brief Function for initializing the nrf log module. */
-static void log_init(void)
-{
-    ret_code_t err_code = NRF_LOG_INIT(NULL);
-    APP_ERROR_CHECK(err_code);
-
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
-}
-
 
 /**@brief Function to start scanning. */
 static void scan_start(bool coded_phy)
@@ -280,10 +329,6 @@ void bsp_event_callback(bsp_event_t event)
         }
         case BSP_EVENT_KEY_1:
         {   
-            if(!logger_state.isLogging) {
-                logger_state.distance_m += 10; 
-                print_state(logger_state, sheep_info); 
-            }
             break; 
         }
         case BSP_EVENT_KEY_2: 
@@ -296,13 +341,6 @@ void bsp_event_callback(bsp_event_t event)
         }
         case BSP_EVENT_KEY_3: 
         {   
-            if(!logger_state.isLogging) {
-                if(logger_state.distance_m > 0) {
-                    logger_state.distance_m -= 10; 
-                    print_state(logger_state, sheep_info); 
-                }
-            }
-            
             break; 
         }
         default:
@@ -314,52 +352,70 @@ void bsp_event_callback(bsp_event_t event)
 }
 
 
+
+/**@brief Function for initializing the nrf log module. */
+static void log_init(void)
+{
+    ret_code_t err_code = NRF_LOG_INIT(NULL);
+    APP_ERROR_CHECK(err_code);
+
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
+}
+
 static void btns_init(void)
 {
     ret_code_t err_code = bsp_init(BSP_INIT_BUTTONS, bsp_event_callback);
     APP_ERROR_CHECK(err_code);
 }
 
-static void timers_init(void)
+static void serial_init(void)
 {
-    ret_code_t err_code = app_timer_init();
-    APP_ERROR_CHECK(err_code);
+    ret_code_t ret = nrf_serial_init(&serial1_uarte, &m_uarte1_drv_config, &serial1_config);
+    APP_ERROR_CHECK(ret);
+    //char c[] = "$PMTK314,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\r\n";
+    //(void)nrf_serial_write(&serial1_uarte, &c, sizeof(c), NULL, 1000);
+
 }
 
-
-/**@brief Function for initializing the timer.
- */
 static void timer_init(void)
 {
     ret_code_t err_code = app_timer_init();
     APP_ERROR_CHECK(err_code);
 }
 
+static void clock_init(void)
+{
+    ret_code_t err_code = nrf_drv_clock_init();
+    APP_ERROR_CHECK(err_code);
+}
+
+static void power_init(void)
+{
+    ret_code_t err_code = nrf_drv_power_init(NULL);
+    APP_ERROR_CHECK(err_code);
+}
 
 int main(void)
 {
-    ret_code_t ret;
-
-    // Initialize.
     log_init();
-    ble_stack_init();
+    clock_init();
+    power_init();
+    nrf_drv_clock_lfclk_request(NULL);
     timer_init();
+    serial_init();
+    ble_stack_init();
     btns_init();
-    sos_logger = sos_init();
+    sos_logger = sos_log_init();
 
     NRF_LOG_INFO("----INPUT MODE----"); 
     NRF_LOG_INFO("1 Msym/s, 0 m");
     NRF_LOG_INFO("Btn1 toggle logger/input mode");
     NRF_LOG_INFO("Btn3 toggle 1 Msym/s and 125 ksym/s"); 
-    NRF_LOG_INFO("Btn2 +10m, Btn4 -10m")
-
 
     // Enter main loop.
     for (;;)
     {
         NRF_LOG_PROCESS();
-        sos_logger.is_coded_phy = logger_state.isCoded_phy;
-        sos_logger.distance_m = logger_state.distance_m;
-        check_and_save(&sos_logger);
+        sos_log_check_and_save(&sos_logger);
     }
 }

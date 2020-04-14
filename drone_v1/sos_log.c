@@ -14,40 +14,80 @@ NRF_BLOCK_DEV_SDC_DEFINE(
         m_block_dev_sdc,
         NRF_BLOCK_DEV_SDC_CONFIG(
                 SDC_SECTOR_SIZE,
-        APP_SDCARD_CONFIG(SDC_MOSI_PIN, SDC_MISO_PIN, SDC_SCK_PIN, SDC_CS_PIN)
+        APP_SDCARD_CONFIG(SOS_LOG_SDC_MOSI_PIN, SOS_LOG_SDC_MISO_PIN, SOS_LOG_SDC_SCK_PIN, SOS_LOG_SDC_CS_PIN)
     ),
     NFR_BLOCK_DEV_INFO_CONFIG("Nordic", "SDC", "1.00")
 );
 
-void sos_clear_log(sos_data_logger_t* logger) {
-    logger->n_measurements = 0;
+void sos_log_clear(sos_log_logger_t* logger) {
+    logger->n_total_measurements = 0;
+    logger->n_gps_measurements = 0;
+    logger->n_radio_measurements = 0;
 }
 
-int sos_log_measurement(sos_data_logger_t* logger, sos_measurement_t measurement) {
-    if (logger->n_measurements < SOS_MAX_LOG_ELEMENTS) {
-        logger->measurements[logger->n_measurements] = measurement;
-        logger->n_measurements++;
+int sos_log_radio_measurement(sos_log_logger_t* logger, sos_radio_measurement_t measurement) {
+    if (logger->n_radio_measurements < SOS_LOG_MAX_RADIO_ELEMENTS) {
+        measurement.measurement_number = logger->n_total_measurements;
+        logger->radio_measurements[logger->n_radio_measurements] = measurement;
+        logger->n_radio_measurements++;
+        logger->n_total_measurements++;
+        if (logger->n_radio_measurements > SOS_LOG_MAX_RADIO_ELEMENTS - 200) {
+            logger->save_flag = true;
+        }
         return SOS_LOG_STATUS_OK;
     }
-    return SOS_LOG_STATUS_FULL;
+    return SOS_LOG_STATUS_FAILED;
 }
 
-int get_last_save_id() {
-    return 0;
+int sos_log_nmea(sos_log_logger_t* logger, char* nmea, int nmea_length) {
+    if (memcmp(nmea, "$GPRMC", 6) == 0 && nmea_length > 2) {
+        char* command = strtok(nmea, ",");
+        char* time = strtok(NULL, ",");
+        char* status = strtok(NULL, ",");
+        if (status[0] == 'V') {
+            return SOS_LOG_STATUS_FAILED;
+        }
+        char* latitude = strtok(NULL, ",");
+        char* NS = strtok(NULL, ",");
+        char* longitude = strtok(NULL, ",");
+        char* EW = strtok(NULL, ",");
+        char* speed = strtok(NULL, ",");
+        char* heading = strtok(NULL, ",");
+        char* date = strtok(NULL, ",");
+
+        if (logger->n_gps_measurements < SOS_LOG_MAX_GPS_ELEMENTS) {
+            sos_gps_measurement_t* measurement = &logger->gps_measurements[logger->n_gps_measurements];
+            measurement->measurement_number = logger->n_total_measurements;
+            measurement->latitude[0] = NS[0];
+            memcpy(&measurement->latitude[1], latitude, 9);
+            measurement->longitude[0] = EW[0];
+            memcpy(&measurement->longitude[1], longitude, 10);
+
+            logger->n_gps_measurements++;
+            logger->n_total_measurements++;
+            if (logger->n_gps_measurements > SOS_LOG_MAX_GPS_ELEMENTS - 50) {
+                logger->save_flag = true;
+            }
+            return SOS_LOG_STATUS_OK;
+        }
+        return SOS_LOG_STATUS_FAILED;
+    }
 }
 
-sos_data_logger_t sos_init() {
-    sos_data_logger_t logger = {
-        .current_log_id = get_last_save_id() + 1,
-        .n_measurements = 0,
+sos_log_logger_t sos_log_init(void) {
+    sos_log_logger_t logger = {
+        .current_log_id = 1,
         .save_flag = false,
-        .measurements = {}
+        .n_radio_measurements = 0,
+        .n_gps_measurements = 0,
+        .n_total_measurements = 0,
+        .radio_measurements = {},
+        .gps_measurements = {},
     };
-
     return logger;
 }
 
-int sos_save_log(sos_data_logger_t* logger) {
+int sos_log_save(sos_log_logger_t* logger) {
     NRF_LOG_INFO("Saving");
     FATFS fs;
     DIR dir;
@@ -71,67 +111,75 @@ int sos_save_log(sos_data_logger_t* logger) {
     if (disk_state)
     {
         NRF_LOG_INFO("Failed Disk Init");
-        return SOS_SAVE_STATUS_FAILED;
+        return SOS_LOG_SAVE_STATUS_FAILED;
     }
 
     ff_result = f_mount(&fs, "", 1);
     if (ff_result)
     {
         NRF_LOG_INFO("Failed Disk Mount");
-        return SOS_SAVE_STATUS_FAILED;
+        return SOS_LOG_SAVE_STATUS_FAILED;
     }
 
     char file_name[12];
-    snprintf(file_name, 13, "S%02d%s%04d.csv", logger->current_log_id, logger->is_coded_phy ? "Y" : "N", logger->distance_m);
+    snprintf(file_name, 13, "S%05d.csv", logger->current_log_id);
     NRF_LOG_INFO("%s", file_name);
     ff_result = f_open(&file, file_name, FA_READ | FA_WRITE | FA_OPEN_APPEND);
     if (ff_result != FR_OK)
     {
         NRF_LOG_INFO("Failed File Open");
-        return SOS_SAVE_STATUS_FAILED;
+        return SOS_LOG_SAVE_STATUS_FAILED;
     }
 
-    char log_buffer[100] = "                                                                                                    ";
-    int l = snprintf(
-        log_buffer,
-        100,
-        "# Distance: %i m. Using coded phy: %s\n",
-        logger->distance_m,
-        logger->is_coded_phy ? "Yes" : "No"
-    );
-
-    ff_result = f_write(&file, log_buffer, l, (UINT *) &bytes_written);
-    if (ff_result) {
-        NRF_LOG_INFO("Write failed");
-        return SOS_SAVE_STATUS_FAILED;
-    }
-
-    for (int i = 0; i < logger->n_measurements; i++) {
+    
+    uint16_t current_gps = 0;
+    uint16_t current_radio = 0;
+    for (uint16_t i = 0; i < logger->n_total_measurements; i++) {
         char log_buffer[100] = "                                                                                                    ";
-        sos_measurement_t measurement = logger->measurements[i];
-        int length = snprintf(
-            log_buffer, 
-            100, 
-            "%d;%d;%d;%d\n", 
-            measurement.tx_power, 
-            measurement.rssi, 
-            measurement.height,
-            measurement.rotation
-            );
-        ff_result = f_write(&file, log_buffer, length, (UINT *) &bytes_written);
-        if (ff_result) {
-            NRF_LOG_INFO("Write failed");
-            return SOS_SAVE_STATUS_FAILED;
-        }
+        // RADIO
+        if (current_radio < logger->n_radio_measurements && logger->radio_measurements[current_radio].measurement_number == i) {
+            sos_radio_measurement_t measurement = logger->radio_measurements[current_radio];
+            int length = snprintf(
+                log_buffer, 
+                100, 
+                "RADIO;%d;%d;%d;%d\n", 
+                measurement.tx_power, 
+                measurement.rssi, 
+                measurement.height,
+                measurement.rotation
+                );
+            ff_result = f_write(&file, log_buffer, length, (UINT *) &bytes_written);
+            if (ff_result) {
+                NRF_LOG_INFO("Write failed");
+                return SOS_LOG_SAVE_STATUS_FAILED;
+            }
+            current_radio++;
+        } else if (current_gps < logger->n_gps_measurements && logger->gps_measurements[current_gps].measurement_number == i) {
+            // GPS
+            sos_gps_measurement_t* measurement = &logger->gps_measurements[current_gps];
+            int length = snprintf(
+                log_buffer, 
+                100, 
+                "GPS;%.10s;%.11s\n", 
+                measurement->latitude, 
+                measurement->longitude 
+                );
+            ff_result = f_write(&file, log_buffer, length, (UINT *) &bytes_written);
+            if (ff_result) {
+                NRF_LOG_INFO("Write failed");
+                return SOS_LOG_SAVE_STATUS_FAILED;
+            }
+            current_gps++;
+        }        
     }
     (void) f_close(&file);
-    return SOS_SAVE_STATUS_OK;
+    return SOS_LOG_SAVE_STATUS_OK;
 }
 
-void check_and_save(sos_data_logger_t* logger) {
+void sos_log_check_and_save(sos_log_logger_t* logger) {
     if (logger->save_flag) {
-        sos_save_log(logger);
-        sos_clear_log(logger);
+        sos_log_save(logger);
+        sos_log_clear(logger);
         logger->save_flag = false;
         logger->current_log_id++;
     }
