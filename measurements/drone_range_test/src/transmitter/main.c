@@ -63,6 +63,12 @@
 #include "nrf_log_default_backends.h"
 
 
+#define DEFAULT_TAG_ID 0xA 
+#define ID_LED_INDEX_0 BSP_BOARD_LED_3 
+#define ID_LED_INDEX_1 BSP_BOARD_LED_2 
+
+#define IDLE_LED BSP_BOARD_LED_1 //LED2
+
 
 #define APP_BLE_CONN_CFG_TAG            1                                  /**< A tag identifying the SoftDevice BLE configuration. */
 #define APP_BLE_OBSERVER_PRIO           3                                  /**< BLE observer priority of the application. There is no need to modify this value. */
@@ -72,8 +78,6 @@
 #define NON_CONNECTABLE_ADV_INTERVAL    MSEC_TO_UNITS(ADV_INT_MS, UNIT_0_625_MS)  /**< The advertising interval for non-connectable advertisement (100 ms). This value can vary between 100ms to 10.24s). */
 
 #define NUM_ADV_PACKETS                 100
-
-
 
 #define ADV_TIMEOUT                     (ADV_INT_MS * (NUM_ADV_PACKETS + 0.7))/10
 
@@ -123,29 +127,24 @@ static void advdata_index_next(void)
     m_adv_data.adv_data.p_data = m_enc_advdata[m_advdata_index];
 }
 
- 
-typedef enum {LOW_70CM = 0, HIGH_2M}M_HEIGHT; 
-typedef enum {DEG90 = 0, DEG45, DEG0}M_ROTATION; 
-
 typedef struct
-{
+{  
+   uint8_t tag_id; 
    uint8_t tx_power_index; 
-   bool coded_phy;  
-   M_HEIGHT height; 
-   M_ROTATION rotation; 
+   uint8_t measure_num; 
 }custom_adv_param_t; 
 
 #define DEFAULT_TX_POWER_INDEX 0 
 
-static int8_t tx_power_dBm[] = {-20, -16, -12, -8, -4, 0, 3, 4}; //possible tx powers in dBm 
+static int8_t tx_power_dBm[] = {-8, -4, 0, 3, 4}; //possible tx powers in dBm 
 
-static custom_adv_param_t custom_adv_param = {0, false, LOW_70CM, DEG90}; 
+static custom_adv_param_t custom_adv_param = {DEFAULT_TAG_ID, DEFAULT_TX_POWER_INDEX, 0}; 
 
 static uint8_t m_beacon_info[] =                    /**< Information advertised by the Beacon. */
-{
+{   
+    DEFAULT_TAG_ID,
     DEFAULT_TX_POWER_INDEX, 
-    LOW_70CM, 
-    DEG90
+    0
 };
 
 
@@ -178,7 +177,6 @@ static void advertising_init(void)
     uint32_t      err_code;
     uint8_t       flags = BLE_GAP_ADV_FLAG_BR_EDR_NOT_SUPPORTED;
 
-
     manuf_specific_data.company_identifier = APP_COMPANY_IDENTIFIER;
 
     manuf_specific_data.data.p_data = (uint8_t *) m_beacon_info;
@@ -194,13 +192,15 @@ static void advertising_init(void)
     // Initialize advertising parameters (used when starting advertising).
     memset(&m_adv_params, 0, sizeof(m_adv_params));
     
-    m_adv_params.properties.type = BLE_GAP_ADV_TYPE_NONCONNECTABLE_NONSCANNABLE_UNDIRECTED;
+    //coded phy 
+    m_adv_params.properties.type    = BLE_GAP_ADV_TYPE_EXTENDED_NONCONNECTABLE_NONSCANNABLE_UNDIRECTED; 
+    m_adv_params.primary_phy        = BLE_GAP_PHY_CODED; 
+    m_adv_params.secondary_phy      = BLE_GAP_PHY_CODED;
+
     m_adv_params.p_peer_addr     = NULL;    // Undirected advertisement.
     m_adv_params.filter_policy   = BLE_GAP_ADV_FP_ANY;
     m_adv_params.interval        = NON_CONNECTABLE_ADV_INTERVAL;
     m_adv_params.duration        = (uint16_t)ADV_TIMEOUT;  //  time out in 10ms units.
-    
-
 
     err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
     APP_ERROR_CHECK(err_code);
@@ -213,29 +213,16 @@ static void advertising_init(void)
 static void advertising_start(custom_adv_param_t param)
 {   
     ret_code_t err_code;
-
-    
      
-    m_beacon_info[0] = param.tx_power_index; 
-    m_beacon_info[1] = param.height; 
-    m_beacon_info[2] = param.rotation; 
+    m_beacon_info[0] = param.tag_id; 
+    m_beacon_info[1] = param.tx_power_index; 
+    m_beacon_info[2] = param.measure_num; 
 
     advdata_index_next();
 
     err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_ADV, m_adv_handle, tx_power_dBm[param.tx_power_index]); 
     APP_ERROR_CHECK(err_code);
     
-    if(param.coded_phy) { 
-        m_adv_params.properties.type    = BLE_GAP_ADV_TYPE_EXTENDED_NONCONNECTABLE_NONSCANNABLE_UNDIRECTED; 
-        m_adv_params.primary_phy        = BLE_GAP_PHY_CODED; 
-        m_adv_params.secondary_phy      = BLE_GAP_PHY_CODED;
-    } else {
-        m_adv_params.properties.type    = BLE_GAP_ADV_TYPE_NONCONNECTABLE_NONSCANNABLE_UNDIRECTED; 
-        m_adv_params.primary_phy        = BLE_GAP_PHY_1MBPS; 
-        m_adv_params.secondary_phy      = BLE_GAP_PHY_1MBPS;
-    }
-    
-
     err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
     APP_ERROR_CHECK(err_code);
 
@@ -249,6 +236,42 @@ static void advertising_start(custom_adv_param_t param)
     APP_ERROR_CHECK(err_code);
 }
 
+static void update_tag_id(bool increase) {
+    if(increase) {
+        if(custom_adv_param.tag_id < 0xD){
+            custom_adv_param.tag_id++;
+        }
+    } else {
+        if(custom_adv_param.tag_id > 0xA) {
+            custom_adv_param.tag_id--; 
+        }
+    }
+    switch(custom_adv_param.tag_id) {
+        case 0xA: 
+            bsp_board_led_off(ID_LED_INDEX_0); 
+            bsp_board_led_off(ID_LED_INDEX_1);
+            break; 
+        case 0xB:
+            bsp_board_led_on(ID_LED_INDEX_0); 
+            bsp_board_led_off(ID_LED_INDEX_1);
+            break; 
+        case 0xC: 
+            bsp_board_led_off(ID_LED_INDEX_0); 
+            bsp_board_led_on(ID_LED_INDEX_1);
+            break; 
+        case 0xD: 
+            bsp_board_led_on(ID_LED_INDEX_0); 
+            bsp_board_led_on(ID_LED_INDEX_1);
+            break; 
+        default: 
+            bsp_board_led_off(ID_LED_INDEX_0); 
+            bsp_board_led_off(ID_LED_INDEX_1);
+            break; 
+     }
+
+    NRF_LOG_INFO("ID %i, measurement %i, START? Btn1 to confirm", custom_adv_param.tag_id, custom_adv_param.measure_num);
+}
+
 
 static bool isTransmitting = false; //Flag to disable button press during transmission 
 
@@ -260,6 +283,7 @@ static void bsp_event_callback(bsp_event_t event)
         {   
             if(!isTransmitting){
                   isTransmitting = true; 
+                  bsp_board_led_off(IDLE_LED);
                   advertising_start(custom_adv_param);
                   NRF_LOG_INFO("RUNNING...")
             }
@@ -267,7 +291,9 @@ static void bsp_event_callback(bsp_event_t event)
         }
         case BSP_EVENT_KEY_1:
         {
-            //NOP 
+            if(!isTransmitting){
+                update_tag_id(true); 
+            } 
             break; 
         }
         case BSP_EVENT_KEY_2: 
@@ -278,7 +304,9 @@ static void bsp_event_callback(bsp_event_t event)
         }
         case BSP_EVENT_KEY_3: 
         {
-            //NOP; 
+            if(!isTransmitting){
+                update_tag_id(false); 
+            }  
             break; 
         }
         default:
@@ -295,34 +323,6 @@ static void leds_n_btns_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-static void print_next_state(custom_adv_param_t param) {
-    char *str_sym; 
-    char *str_height;
-    char *str_rot; 
-
-    if(param.coded_phy) {
-        str_sym = "125 ksym/s";
-    } else {
-        str_sym = "1 Msym/s";
-    }
-
-    if(param.height) {
-        str_height = "HIGH 2 m";
-    } else { 
-        str_height = "LOW 70 cm";
-    }
-
-    if(param.rotation == DEG90) {
-        str_rot = "90 DEG"; 
-    } else if(param.rotation == DEG45) {
-        str_rot = "45 DEG"; 
-    } else {
-        str_rot = "0 DEG"; 
-    }
-        
-    NRF_LOG_INFO("START %s, %s, %s? Btn1 to confirm", (uint32_t)str_sym, (uint32_t)str_height, (uint32_t)str_rot);
-}
-
 
 //Runs automatically when the advertising duration is timed out 
 static void adv_restart_timer_handler(void * p_context)
@@ -335,18 +335,10 @@ static void adv_restart_timer_handler(void * p_context)
         advertising_start(custom_adv_param);
     } else {
         custom_adv_param.tx_power_index = 0; 
-        custom_adv_param.rotation++; 
-        if(custom_adv_param.rotation > DEG0) {
-            custom_adv_param.rotation = DEG90;
-            custom_adv_param.height++; 
-            if(custom_adv_param.height > HIGH_2M) {
-                custom_adv_param.height = LOW_70CM; 
-                custom_adv_param.coded_phy = !custom_adv_param.coded_phy; 
-                NRF_LOG_INFO("WARNING: Toggle LE mode (coded_phy or LE phy)"); 
-            }
-        }
-        print_next_state(custom_adv_param); 
+        custom_adv_param.measure_num++;
+        NRF_LOG_INFO("ID %i, measurement %i, START? Btn1 to confirm", custom_adv_param.tag_id, custom_adv_param.measure_num);
         isTransmitting = false; 
+        bsp_board_led_on(IDLE_LED);
     }
 }
 
@@ -441,7 +433,9 @@ int main(void)
     advertising_init();
 
     // Start execution.
-    NRF_LOG_INFO("START 1 Msym/s, LOW 70 cm, 90 DEG? Btn1 to confirm");
+    NRF_LOG_INFO("ID %i, measurement %i, START? Btn1 to confirm", custom_adv_param.tag_id, custom_adv_param.measure_num);
+
+    bsp_board_led_on(IDLE_LED);
 
     // Enter main loop.
     while(1)
@@ -449,155 +443,3 @@ int main(void)
         idle_state_handle();
     }
 }
-
-
-/**
- * @}
- */
-
- /*Old function definitions*/ 
-
- //static void advertising_start(uint8_t sheep_id, uint8_t tx_power_index, bool coded_phy)
-//{   
-//    ret_code_t err_code;
-//
-//    advdata_index_next();
-//     
-//    m_beacon_info[0] = sheep_id;
-//    m_beacon_info[1] = tx_power_index; 
-//
-//    err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_ADV, m_adv_handle, tx_power_dBm[tx_power_index]); 
-//    APP_ERROR_CHECK(err_code);
-//    
-//    if(coded_phy) { 
-//        m_adv_params.properties.type    = BLE_GAP_ADV_TYPE_EXTENDED_NONCONNECTABLE_NONSCANNABLE_UNDIRECTED; 
-//        m_adv_params.primary_phy        = BLE_GAP_PHY_CODED; 
-//        m_adv_params.secondary_phy      = BLE_GAP_PHY_CODED;
-//    } else {
-//        m_adv_params.properties.type    = BLE_GAP_ADV_TYPE_NONCONNECTABLE_NONSCANNABLE_UNDIRECTED; 
-//        m_adv_params.primary_phy        = BLE_GAP_PHY_1MBPS; 
-//        m_adv_params.secondary_phy      = BLE_GAP_PHY_1MBPS;
-//    }
-//    
-//
-//    err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
-//    APP_ERROR_CHECK(err_code);
-//
-//    err_code = sd_ble_gap_adv_set_configure(&m_adv_handle, &m_adv_data, &m_adv_params);
-//    APP_ERROR_CHECK(err_code);
-//
-//    err_code = sd_ble_gap_adv_start(m_adv_handle, APP_BLE_CONN_CFG_TAG);
-//    APP_ERROR_CHECK(err_code);
-//
-//    err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
-//    APP_ERROR_CHECK(err_code);
-//}
-
-
-//static void advertising_update_id(void)
-//{
-//    uint32_t err_code;
-//
-//    m_beacon_info[0]++;
-//    advdata_index_next();
-//
-//    err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
-//    APP_ERROR_CHECK(err_code);
-//
-//    err_code = sd_ble_gap_adv_set_configure(&m_adv_handle, &m_adv_data, NULL);
-//    APP_ERROR_CHECK(err_code);
-//
-//}
-
-
-/**@brief Function for starting advertising.
- */
-//static void advertising_start(void)
-//{
-//    ret_code_t err_code;
-//
-//    err_code = sd_ble_gap_adv_start(m_adv_handle, APP_BLE_CONN_CFG_TAG);
-//    APP_ERROR_CHECK(err_code);
-//
-//    err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
-//    APP_ERROR_CHECK(err_code);
-//}
-
-//static void advertising_update_interval(void)
-//{
-//    uint32_t err_code;
-//
-//    static uint16_t adv_interval_ms[] = {100, 200, 300, 500, 1000, 2000, 3000, 5000, 7000, 10000}; 
-//    static uint8_t index = 0;
-//    
-//    index++; 
-//    index %= sizeof(adv_interval_ms)/sizeof(uint16_t);
-//
-//
-//    (void) sd_ble_gap_adv_stop(m_adv_handle);
-//
-//    m_adv_params.interval = MSEC_TO_UNITS(adv_interval_ms[index], UNIT_0_625_MS); 
-//
-//    m_beacon_info[1] = (uint8_t)(adv_interval_ms[index]/100); 
-//
-//    err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
-//    APP_ERROR_CHECK(err_code);
-//
-//   
-//    err_code = sd_ble_gap_adv_set_configure(&m_adv_handle, &m_adv_data, &m_adv_params);
-//    APP_ERROR_CHECK(err_code);
-//    
-//    advertising_start(); 
-//
-//}
-
-//static void advertising_update_txpower(void)
-//{
-//    uint32_t err_code;
-//    static int8_t tx_power_dBm[] = {-40, -20, -16, -12, -8, -4, 0, 3, 4}; 
-//
-//    //create a look up table to easily see what TX power is used in the advertising packet, where 33 and 44 is +3dBm and +4dBm  
-//    static uint8_t beacon_info_LUT[] = {0x40, 0x20, 0x16, 0x12, 0x8, 0x4, 0x0, 0x33, 0x44}; 
-//    static uint8_t index = 0;
-//
-//    err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_ADV, m_adv_handle, tx_power_dBm[index]); 
-//    APP_ERROR_CHECK(err_code);
-//
-//    m_beacon_info[2] = (uint8_t) beacon_info_LUT[index];
-//    advdata_index_next();
-//
-//    err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
-//    APP_ERROR_CHECK(err_code);
-//
-//    err_code = sd_ble_gap_adv_set_configure(&m_adv_handle, &m_adv_data, NULL);
-//    APP_ERROR_CHECK(err_code);
-//
-//    index++; 
-//    index %= (sizeof(tx_power_dBm)/sizeof(int8_t)); 
-//
-//}
-
-//bool coded_phy = false; 
-//static void advertising_toggle_PHY(void)
-//{   
-//    uint32_t err_code;
-//    
-//    coded_phy = !coded_phy; 
-//
-//    if(coded_phy) { 
-//        m_adv_params.properties.type    = BLE_GAP_ADV_TYPE_EXTENDED_NONCONNECTABLE_NONSCANNABLE_UNDIRECTED; 
-//        m_adv_params.primary_phy        = BLE_GAP_PHY_CODED; 
-//        m_adv_params.secondary_phy      = BLE_GAP_PHY_CODED;
-//    } else {
-//        m_adv_params.properties.type    = BLE_GAP_ADV_TYPE_NONCONNECTABLE_NONSCANNABLE_UNDIRECTED; 
-//        m_adv_params.primary_phy        = BLE_GAP_PHY_1MBPS; 
-//        m_adv_params.secondary_phy      = BLE_GAP_PHY_1MBPS;
-//    }
-//
-//    (void) sd_ble_gap_adv_stop(m_adv_handle);
-//
-//    err_code = sd_ble_gap_adv_set_configure(&m_adv_handle, &m_adv_data, &m_adv_params);
-//    APP_ERROR_CHECK(err_code);
-//    
-//    advertising_start();
-//}
