@@ -61,6 +61,12 @@
 
 #include "sos_log.h"
 
+#define SCANNING_LED    BSP_BOARD_LED_1 //LED2
+#define GPS_LED         BSP_BOARD_LED_2 //LED3
+#define SD_CARD_LED     BSP_BOARD_LED_3 //LED4
+
+#define MEASURE_TIME_MS 10100 //20ms * 100 packets * 5 tx_powers + 100ms 
+
 
 #define APP_BLE_CONN_CFG_TAG        1                                   /**< Tag that refers to the BLE stack configuration set with @ref sd_ble_cfg_set. The default tag is @ref BLE_CONN_CFG_TAG_DEFAULT. */
 #define APP_BLE_OBSERVER_PRIO       3                                   /**< BLE observer priority of the application. There is no need to modify this value. */
@@ -73,22 +79,22 @@ static uint8_t               m_scan_buffer_data[BLE_GAP_SCAN_BUFFER_EXTENDED_MIN
 
 #define SHEEP_TAG_ID 0xFFAABA //0xFF signals manufacture ID is coming, which is set to 0xBAAA 
 
-typedef enum {LOW_70CM = 0, HIGH_2M}M_HEIGHT; 
-typedef enum {DEG90 = 0, DEG45, DEG0}M_ROTATION; 
+//typedef enum {LOW_70CM = 0, HIGH_2M}M_HEIGHT; 
+//typedef enum {DEG90 = 0, DEG45, DEG0}M_ROTATION; 
 
-static int8_t tx_power_dBm[] = {-20, -16, -12, -8, -4, 0, 3, 4};
+APP_TIMER_DEF(m_save_measurement_timer); //Timer for logging after a measurement 
+
+static int8_t tx_power_dBm[] = {-8, -4, 0, 3, 4};
 
 typedef struct 
-{
+{   
+    uint8_t tag_id; 
     int8_t TXpower; 
-    int8_t rssi; 
-    bool isCoded_phy;
-    M_HEIGHT height; 
-    M_ROTATION rotation; 
-    uint16_t distance_m; 
-}sheep_packet_t;
+    int8_t rssi;  
+    uint8_t measure_num;
+}tag_packet_t;
 
-static sheep_packet_t sheep_info; //init 
+static tag_packet_t packet_info; //init 
 
 typedef struct {
     bool isCoded_phy;
@@ -184,47 +190,47 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     app_error_handler(0xDEADBEEF, line_num, p_file_name);
 }
 
-static void print_state(logger_state_t state, sheep_packet_t info) {
-    if(state.isLogging) {
-         NRF_LOG_INFO("---LOGGING MODE---"); 
-         NRF_LOG_INFO("TX RADIO POWER:\t\t%idBm", info.TXpower); 
-         NRF_LOG_INFO("RSSI:\t\t\t\%idBm", info.rssi);
-        if(info.height == HIGH_2M) {
-            NRF_LOG_INFO("HEIGHT:\t\t\t2 m;");
-        } else {
-            NRF_LOG_INFO("HEIGHT:\t\t\t70 cm");
-        }
-        if(info.rotation == DEG90) {
-            NRF_LOG_INFO("ROTATION:\t\t\t90 DEG");   
-        } else if(sheep_info.rotation == DEG45){
-            NRF_LOG_INFO("ROTATION:\t\t\t45 DEG");
-        } else {
-        NRF_LOG_INFO("ROTATION:\t\t\t0 DEG");
-        }
-        return; 
-    }
-    
-    char *str_sym; 
-
-    if(state.isCoded_phy) {
-        str_sym = "125 ksym/s";
-    } else {
-        str_sym = "1 Msym/s";
-    }
-
-    NRF_LOG_INFO("----INPUT MODE----"); 
-    NRF_LOG_INFO("%s", (uint32_t)str_sym);
-    NRF_LOG_INFO("Btn1 toggle logger/input mode");
-    NRF_LOG_INFO("Btn3 toggle 1 Msym/s and 125 ksym/s"); 
-} 
+//static void print_state(logger_state_t state, tag_packet_t info) {
+//    if(state.isLogging) {
+//         NRF_LOG_INFO("---LOGGING MODE---"); 
+//         NRF_LOG_INFO("TX RADIO POWER:\t\t%idBm", info.TXpower); 
+//         NRF_LOG_INFO("RSSI:\t\t\t\%idBm", info.rssi);
+//        if(info.height == HIGH_2M) {
+//            NRF_LOG_INFO("HEIGHT:\t\t\t2 m;");
+//        } else {
+//            NRF_LOG_INFO("HEIGHT:\t\t\t70 cm");
+//        }
+//        if(info.rotation == DEG90) {
+//            NRF_LOG_INFO("ROTATION:\t\t\t90 DEG");   
+//        } else if(packet_info.rotation == DEG45){
+//            NRF_LOG_INFO("ROTATION:\t\t\t45 DEG");
+//        } else {
+//        NRF_LOG_INFO("ROTATION:\t\t\t0 DEG");
+//        }
+//        return; 
+//    }
+//    
+//    char *str_sym; 
+//
+//    if(state.isCoded_phy) {
+//        str_sym = "125 ksym/s";
+//    } else {
+//        str_sym = "1 Msym/s";
+//    }
+//
+//    NRF_LOG_INFO("----INPUT MODE----"); 
+//    NRF_LOG_INFO("%s", (uint32_t)str_sym);
+//    NRF_LOG_INFO("Btn1 toggle logger/input mode");
+//    NRF_LOG_INFO("Btn3 toggle 1 Msym/s and 125 ksym/s"); 
+//} 
 
 
 void log_sheepinfo() {
     sos_radio_measurement_t measurement = {
-        .tx_power = sheep_info.TXpower,
-        .rssi = sheep_info.rssi,
-        .height = sheep_info.height,
-        .rotation = sheep_info.rotation
+        .tx_power = packet_info.TXpower,
+        .rssi = packet_info.rssi,
+       // .height = packet_info.height,
+       // .rotation = packet_info.rotation
     };
     int err = sos_log_radio_measurement(&sos_logger, measurement);
 }
@@ -234,6 +240,9 @@ void log_sheepinfo() {
  * @param[in]   p_ble_evt   Bluetooth stack event.
  * @param[in]   p_context   Unused.
  */
+
+static bool isMeasuring = false; 
+
 static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
     ret_code_t err_code;
@@ -247,16 +256,24 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         if(manufacture_id == SHEEP_TAG_ID){
 
             //uint32_t time = app_timer_cnt_get(); 
-            //uint32_t time_diff = app_timer_cnt_diff_compute(time, prev_time);   
+            //uint32_t time_diff = app_timer_cnt_diff_compute(time, prev_time); 
             
-            uint8_t tx_power_index = p_adv_report->data.p_data[7];
-            sheep_info.TXpower = tx_power_dBm[tx_power_index]; 
-            sheep_info.height = p_adv_report->data.p_data[8]; 
-            sheep_info.rotation = p_adv_report->data.p_data[9]; 
-            sheep_info.rssi = p_adv_report->rssi; 
-            sheep_info.isCoded_phy = logger_state.isCoded_phy; 
-            log_sheepinfo();
-            print_state(logger_state, sheep_info);  
+            if(isMeasuring == false) {
+                isMeasuring = true; 
+                APP_ERROR_CHECK(app_timer_start(m_save_measurement_timer, APP_TIMER_TICKS(MEASURE_TIME_MS), NULL));
+                bsp_board_led_on(SCANNING_LED); 
+            }
+            
+            packet_info.tag_id = p_adv_report->data.p_data[7];
+            uint8_t tx_power_index = p_adv_report->data.p_data[8];
+            packet_info.TXpower = tx_power_dBm[tx_power_index]; 
+            packet_info.measure_num = p_adv_report->data.p_data[9];
+            packet_info.rssi = p_adv_report->rssi; 
+
+            NRF_LOG_INFO("ID: %i, measurement: %i, tx_power: %i", packet_info.tag_id, packet_info.measure_num, packet_info.TXpower); 
+
+            //log_sheepinfo();
+            
         }  
         // Continue scanning.
         sd_ble_gap_scan_start(NULL, &m_scan_buffer);
@@ -291,23 +308,26 @@ static void ble_stack_init(void)
 }
 
 /**@brief Function to start scanning. */
-static void scan_start(bool coded_phy)
+static void scan_start_coded_phy(void)
 {
     ret_code_t ret;
 
     //coded phy: 
     //m_scan_param.extended = 1; 
-    m_scan_param.extended       = coded_phy;
+    m_scan_param.extended       = 1;
 
     m_scan_param.active         = 0; //dont't do scan req  
     m_scan_param.interval       = SCAN_INTERVAL;
     m_scan_param.window         = SCAN_WINDOW;
     m_scan_param.timeout        = SCAN_DURATION;
-    m_scan_param.scan_phys      = coded_phy ? BLE_GAP_PHY_CODED : BLE_GAP_PHY_1MBPS;
+    m_scan_param.scan_phys      = BLE_GAP_PHY_CODED;
     m_scan_param.filter_policy  = BLE_GAP_SCAN_FP_ACCEPT_ALL;
 
     ret = sd_ble_gap_scan_start(&m_scan_param, &m_scan_buffer);
     APP_ERROR_CHECK(ret);
+    NRF_LOG_INFO("SCANNING..."); 
+
+
 }
 
 void bsp_event_callback(bsp_event_t event)
@@ -316,15 +336,15 @@ void bsp_event_callback(bsp_event_t event)
     {
         case BSP_EVENT_KEY_0:
         {   
-            logger_state.isLogging = !logger_state.isLogging; 
-            if(logger_state.isLogging) {
-                scan_start(logger_state.isCoded_phy); 
-                NRF_LOG_INFO("---LOGGING MODE---"); 
-            } else {
-                APP_ERROR_CHECK(sd_ble_gap_scan_stop());
-                print_state(logger_state, sheep_info);
-                sos_logger.save_flag = true;
-            }
+//            logger_state.isLogging = !logger_state.isLogging; 
+//            if(logger_state.isLogging) {
+//                scan_start(logger_state.isCoded_phy); 
+//                NRF_LOG_INFO("---LOGGING MODE---"); 
+//            } else {
+//                APP_ERROR_CHECK(sd_ble_gap_scan_stop());
+//                print_state(logger_state, packet_info);
+//                sos_logger.save_flag = true;
+//            }
             break;
         }
         case BSP_EVENT_KEY_1:
@@ -333,10 +353,10 @@ void bsp_event_callback(bsp_event_t event)
         }
         case BSP_EVENT_KEY_2: 
         {
-            if(!logger_state.isLogging) {
-                logger_state.isCoded_phy = !logger_state.isCoded_phy;  
-                print_state(logger_state, sheep_info); 
-            } 
+//            if(!logger_state.isLogging) {
+//                logger_state.isCoded_phy = !logger_state.isCoded_phy;  
+//                print_state(logger_state, packet_info); 
+//            } 
             break; 
         }
         case BSP_EVENT_KEY_3: 
@@ -362,9 +382,15 @@ static void log_init(void)
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
-static void btns_init(void)
+//static void btns_init(void)
+//{
+//    ret_code_t err_code = bsp_init(BSP_INIT_BUTTONS, bsp_event_callback);
+//    APP_ERROR_CHECK(err_code);
+//}
+
+static void leds_n_btns_init(void)
 {
-    ret_code_t err_code = bsp_init(BSP_INIT_BUTTONS, bsp_event_callback);
+    ret_code_t err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_event_callback);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -377,9 +403,23 @@ static void serial_init(void)
 
 }
 
+static void save_measurement_timer_handler(void * p_context)
+{
+    UNUSED_PARAMETER(p_context);
+    
+    isMeasuring = false;  
+    bsp_board_led_off(SCANNING_LED);
+    NRF_LOG_INFO("Measurement done"); 
+
+    //sos_logger.save_flag = true; 
+}
+
 static void timer_init(void)
 {
     ret_code_t err_code = app_timer_init();
+    APP_ERROR_CHECK(err_code);
+
+    err_code = app_timer_create(&m_save_measurement_timer, APP_TIMER_MODE_SINGLE_SHOT, save_measurement_timer_handler);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -404,13 +444,11 @@ int main(void)
     timer_init();
     serial_init();
     ble_stack_init();
-    btns_init();
+    leds_n_btns_init();
     sos_logger = sos_log_init();
+    scan_start_coded_phy(); 
 
-    NRF_LOG_INFO("----INPUT MODE----"); 
-    NRF_LOG_INFO("1 Msym/s, 0 m");
-    NRF_LOG_INFO("Btn1 toggle logger/input mode");
-    NRF_LOG_INFO("Btn3 toggle 1 Msym/s and 125 ksym/s"); 
+   
 
     // Enter main loop.
     for (;;)
