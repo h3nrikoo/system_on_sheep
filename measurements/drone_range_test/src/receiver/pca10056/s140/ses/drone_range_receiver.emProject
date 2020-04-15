@@ -1,6 +1,6 @@
 <!DOCTYPE CrossStudio_Project_File>
-<solution Name="drone_v1" target="8" version="2">
-  <project Name="drone_v1">
+<solution Name="drone_range_receiver" target="8" version="2">
+  <project Name="drone_range_receiver">
     <configuration
       Name="Common"
       arm_architecture="v7EM"
