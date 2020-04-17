@@ -274,7 +274,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             packet_info.measure_num = p_adv_report->data.p_data[9];
             packet_info.rssi = p_adv_report->rssi; 
 
-            NRF_LOG_INFO("ID: %i, measurement: %i, tx_power: %i", packet_info.tag_id, packet_info.measure_num, packet_info.TXpower); 
+            //NRF_LOG_INFO("ID: %i, measurement: %i, tx_power: %i", packet_info.tag_id, packet_info.measure_num, packet_info.TXpower); 
 
             log_sheepinfo();
             
