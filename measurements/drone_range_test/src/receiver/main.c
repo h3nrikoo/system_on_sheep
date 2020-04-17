@@ -123,8 +123,8 @@ NRF_SERIAL_QUEUES_DEF(serial1_queues, SERIAL_FIFO_TX_SIZE, SERIAL_FIFO_RX_SIZE);
 
 
 #define SERIAL_BUFF_TX_SIZE 1
-#define SERIAL_BUFF_RX_SIZE 1
-
+#define SERIAL_BUFF_RX_SIZE 32
+static void serial_init(void);
 static char nmea[200] = "";
 static int nmea_len = 0;
 static void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_serial_event_t event) {
@@ -140,8 +140,9 @@ static void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_seria
             nmea[nmea_len] = a;
             nmea_len++;
             if (a == '\n' && b == '\r') {
-                if (logger_state.isLogging) {
-                    sos_log_nmea(&sos_logger, nmea, nmea_len);
+                int log_status = sos_log_nmea(&sos_logger, nmea, nmea_len);
+                if (log_status == SOS_LOG_STATUS_OK) {
+                    bsp_board_led_invert(GPS_LED);
                 }
                 nmea_len = 0;
             }
@@ -153,7 +154,8 @@ static void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_seria
         if (sos_logger.n_total_measurements > 0) {
             sos_logger.save_flag = true;
         } else if (!sos_logger.save_flag) {
-            sd_nvic_SystemReset();
+            nrf_serial_uninit(p_serial);
+            serial_init();
         }
     }
 }
@@ -227,8 +229,10 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 
 void log_sheepinfo() {
     sos_radio_measurement_t measurement = {
+        .tag_id = packet_info.tag_id,
         .tx_power = packet_info.TXpower,
         .rssi = packet_info.rssi,
+        .measure_num = packet_info.measure_num
        // .height = packet_info.height,
        // .rotation = packet_info.rotation
     };
@@ -272,7 +276,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
             NRF_LOG_INFO("ID: %i, measurement: %i, tx_power: %i", packet_info.tag_id, packet_info.measure_num, packet_info.TXpower); 
 
-            //log_sheepinfo();
+            log_sheepinfo();
             
         }  
         // Continue scanning.
@@ -336,15 +340,7 @@ void bsp_event_callback(bsp_event_t event)
     {
         case BSP_EVENT_KEY_0:
         {   
-//            logger_state.isLogging = !logger_state.isLogging; 
-//            if(logger_state.isLogging) {
-//                scan_start(logger_state.isCoded_phy); 
-//                NRF_LOG_INFO("---LOGGING MODE---"); 
-//            } else {
-//                APP_ERROR_CHECK(sd_ble_gap_scan_stop());
-//                print_state(logger_state, packet_info);
-//                sos_logger.save_flag = true;
-//            }
+            sos_logger.save_flag = true;
             break;
         }
         case BSP_EVENT_KEY_1:
@@ -411,7 +407,7 @@ static void save_measurement_timer_handler(void * p_context)
     bsp_board_led_off(SCANNING_LED);
     NRF_LOG_INFO("Measurement done"); 
 
-    //sos_logger.save_flag = true; 
+    sos_logger.save_flag = true; 
 }
 
 static void timer_init(void)
@@ -447,8 +443,7 @@ int main(void)
     leds_n_btns_init();
     sos_logger = sos_log_init();
     scan_start_coded_phy(); 
-
-   
+    sos_logger.save_flag = true;
 
     // Enter main loop.
     for (;;)

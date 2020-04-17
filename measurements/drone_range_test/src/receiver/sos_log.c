@@ -62,17 +62,49 @@ int sos_log_nmea(sos_log_logger_t* logger, char* nmea, int nmea_length) {
             memcpy(&measurement->latitude[1], latitude, 9);
             measurement->longitude[0] = EW[0];
             memcpy(&measurement->longitude[1], longitude, 10);
-
+            memcpy(&measurement->time[0], time, 10);
+            memcpy(&measurement->date[0], date, 6);
+            memcpy(&measurement->speed[0], speed, 5);
+            memcpy(&measurement->heading[0], heading, 5);
+            memcpy(&logger->last_time[0], time, 10);
+            logger->last_time_set = true;
+            measurement->time;
             logger->n_gps_measurements++;
             logger->n_total_measurements++;
             if (logger->n_gps_measurements > SOS_LOG_MAX_GPS_ELEMENTS - 50) {
                 logger->save_flag = true;
             }
             return SOS_LOG_STATUS_OK;
+              
         }
         return SOS_LOG_STATUS_FAILED;
-    }
+      }
+//    } else if (memcmp(nmea, "$GPGGA", 6) == 0 && nmea_length > 2) {
+//        char* command = strtok(nmea, ",");
+//        char* time = strtok(NULL, ",");
+//        char* latitude = strtok(NULL, ",");
+//        char* NS = strtok(NULL, ",");
+//        char* longitude = strtok(NULL, ",");
+//        char* EW = strtok(NULL, ",");
+//        char* satellites = strtok(NULL, ",");
+//        char* HDOP = strtok(NULL, ",");
+//        char* altitude_msl = strtok(NULL, ",");
+//        char* altitude_units = strtok(NULL, ",");
+//        char* geoidal = strtok(NULL, ",");
+//        char* geoidal_units = strtok(NULL, ",");
+//        char* age_of_diff = strtok(NULL, ",");
+//        char* checksum = strtok(NULL, ",");
+//
+//        char a[10] = {0};
+//        memcpy(&a[0], command, 6);
+//        
+//        NRF_LOG_INFO("Logging: %s", 
+//            a
+//        );
+//    }
 }
+
+
 
 sos_log_logger_t sos_log_init(void) {
     sos_log_logger_t logger = {
@@ -83,6 +115,8 @@ sos_log_logger_t sos_log_init(void) {
         .n_total_measurements = 0,
         .radio_measurements = {},
         .gps_measurements = {},
+        .last_time_set = false,
+        .last_time = {0},
     };
     return logger;
 }
@@ -122,7 +156,12 @@ int sos_log_save(sos_log_logger_t* logger) {
     }
 
     char file_name[12];
-    snprintf(file_name, 13, "S%05d.csv", logger->current_log_id);
+    if (logger->last_time_set) {
+        snprintf(file_name, 13, "%.6s.csv", logger->last_time);
+    } else {
+        snprintf(file_name, 13, "%05d.csv", logger->current_log_id);
+    }
+    
     NRF_LOG_INFO("%s", file_name);
     ff_result = f_open(&file, file_name, FA_READ | FA_WRITE | FA_OPEN_APPEND);
     if (ff_result != FR_OK)
@@ -143,10 +182,10 @@ int sos_log_save(sos_log_logger_t* logger) {
                 log_buffer, 
                 100, 
                 "RADIO;%d;%d;%d;%d\n", 
+                measurement.tag_id,
+                measurement.measure_num,
                 measurement.tx_power, 
-                measurement.rssi, 
-                measurement.height,
-                measurement.rotation
+                measurement.rssi
                 );
             ff_result = f_write(&file, log_buffer, length, (UINT *) &bytes_written);
             if (ff_result) {
@@ -160,9 +199,13 @@ int sos_log_save(sos_log_logger_t* logger) {
             int length = snprintf(
                 log_buffer, 
                 100, 
-                "GPS;%.10s;%.11s\n", 
+                "GPS;%.10s;%.11s;%.10s;%.6s;%.5s;%.5s\n", 
                 measurement->latitude, 
-                measurement->longitude 
+                measurement->longitude,
+                measurement->time, 
+                measurement->date, 
+                measurement->speed, 
+                measurement->heading
                 );
             ff_result = f_write(&file, log_buffer, length, (UINT *) &bytes_written);
             if (ff_result) {
@@ -178,9 +221,13 @@ int sos_log_save(sos_log_logger_t* logger) {
 
 void sos_log_check_and_save(sos_log_logger_t* logger) {
     if (logger->save_flag) {
-        sos_log_save(logger);
+        bsp_board_led_off(BSP_BOARD_LED_3);
+        int status = sos_log_save(logger);
         sos_log_clear(logger);
         logger->save_flag = false;
         logger->current_log_id++;
+        if (status == SOS_LOG_SAVE_STATUS_OK) {
+            bsp_board_led_on(BSP_BOARD_LED_3);
+        }
     }
 }
