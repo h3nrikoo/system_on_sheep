@@ -1,0 +1,433 @@
+<info> app_timer: RTC: initialized.
+<info> app: RTT Ranging Client started.
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 1, Var: 4, Cnt: 128/128
+<info> app: Est. distance: 9 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 2, Var: 4, Cnt: 512/512
+<info> app: Est. distance: 18 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 1, Var: 5, Cnt: 128/128
+<info> app: Est. distance: 9 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 11, Var: 6, Cnt: 128/128
+<info> app: Est. distance: 99 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 12, Var: 4, Cnt: 128/128
+<info> app: Est. distance: 108 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 12, Var: 4, Cnt: 512/512
+<info> app: Est. distance: 108 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 12, Var: 4, Cnt: 512/512
+<info> app: Est. distance: 108 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 13, Var: 4, Cnt: 128/128
+<info> app: Est. distance: 117 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 16, Var: 4, Cnt: 128/128
+<info> app: Est. distance: 144 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 16, Var: 5, Cnt: 512/512
+<info> app: Est. distance: 144 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 20, Var: 5, Cnt: 128/128
+<info> app: Est. distance: 180 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 20, Var: 13, Cnt: 424/512
+<info> app: Est. distance: 180 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 25, Var: 4, Cnt: 128/128
+<info> app: Est. distance: 225 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 25, Var: 4, Cnt: 512/512
+<info> app: Est. distance: 225 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: No RTT packets received!
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 31, Var: 5, Cnt: 127/128
+<info> app: Est. distance: 279 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 30, Var: 5, Cnt: 505/512
+<info> app: Est. distance: 270 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 33, Var: 5, Cnt: 128/128
+<info> app: Est. distance: 297 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 34, Var: 6, Cnt: 512/512
+<info> app: Est. distance: 306 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 40, Var: 4, Cnt: 128/128
+<info> app: Est. distance: 360 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 41, Var: 5, Cnt: 512/512
+<info> app: Est. distance: 369 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 45, Var: 6, Cnt: 128/128
+<info> app: Est. distance: 405 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 44, Var: 4, Cnt: 498/512
+<info> app: Est. distance: 396 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 50, Var: 4, Cnt: 128/128
+<info> app: Est. distance: 450 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 51, Var: 5, Cnt: 509/512
+<info> app: Est. distance: 459 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 56, Var: 6, Cnt: 127/128
+<info> app: Est. distance: 504 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 56, Var: 5, Cnt: 508/512
+<info> app: Est. distance: 504 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 60, Var: 4, Cnt: 125/128
+<info> app: Est. distance: 540 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 62, Var: 4, Cnt: 509/512
+<info> app: Est. distance: 558 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 66, Var: 5, Cnt: 128/128
+<info> app: Est. distance: 594 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 66, Var: 6, Cnt: 109/512
+<info> app: Est. distance: 594 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 71, Var: 5, Cnt: 128/128
+<info> app: Est. distance: 639 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 71, Var: 5, Cnt: 495/512
+<info> app: Est. distance: 639 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 77, Var: 4, Cnt: 127/128
+<info> app: Est. distance: 693 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 77, Var: 4, Cnt: 496/512
+<info> app: Est. distance: 693 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 82, Var: 6, Cnt: 19/128
+<info> app: Est. distance: 738 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 83, Var: 4, Cnt: 83/512
+<info> app: Est. distance: 747 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 88, Var: 5, Cnt: 127/128
+<info> app: Est. distance: 792 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 86, Var: 4, Cnt: 498/512
+<info> app: Est. distance: 774 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 94, Var: 4, Cnt: 123/128
+<info> app: Est. distance: 846 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 94, Var: 5, Cnt: 502/512
+<info> app: Est. distance: 846 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 98, Var: 4, Cnt: 115/128
+<info> app: Est. distance: 882 m
+<info> app: Connected.
+<info> app: RTT Ranging connected!
+<info> app: RTT Ranging enabled!
+<info> app: Manual disconnect.
+<info> app: RTT Ranging disconnected!
+<info> app: Disconnected.
+<info> app: RTT Ranging started!
+<info> app: RTT Ranging finished!
+<info> app: Avg: 97, Var: 5, Cnt: 432/512
+<info> app: Est. distance: 873 m
+<info> app: Connected.
+<info> app: Disconnected.
