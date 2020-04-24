@@ -4,33 +4,7 @@ import seaborn as sns
 from collections import namedtuple
 import math
 import geopy.distance
-
-def generate_dataset():
-    Measurement = namedtuple("Measurement", ['distance', 'angle', 'tx_power', 'rssi'])
-
-    measurements = []
-
-    def m2d(m):
-        return (m - 1) * 50
-
-    def id2dir(id):
-        if id == 10:
-            return 0
-        elif id == 11:
-            return 90
-
-    with open('data/raw/combined.csv') as file:
-        for line in file.readlines():
-            line = line.strip()
-            values = line.split(";")
-            if values[0] == 'RADIO':
-                measurement = Measurement(m2d(int(values[2])), id2dir(int(values[1])), int(values[3]), int(values[4]))
-                measurements.append(measurement)
-
-    df = pd.DataFrame(measurements)
-    df.to_csv('data/dataset.csv', index=False)
-
-#generate_dataset()
+pd.set_option('display.max_rows', 10000)
 
 def generate_dataset_gps():
     # tx_coord = (63.4073927,10.4775050) #old 
@@ -41,13 +15,16 @@ def generate_dataset_gps():
     measurements = []
 
     def m2d(m):
-        return math.floor(math.sqrt(((m - 1) * 50)**2 + 100**2))
+        if m < 9:
+            return math.floor(math.sqrt(((m - 2) * 50)**2 + 100**2))
+        else:
+            return math.floor(math.sqrt(((m - 3) * 50) ** 2 + 100 ** 2))
 
     def id2dir(id):
         if id == 10:
-            return 0
-        elif id == 11:
             return 90
+        elif id == 11:
+            return 0
 
     #convert degrees decimal minutes to decimal degrees 
     def dmm2dd(d, dm):
@@ -70,7 +47,7 @@ def generate_dataset_gps():
     n_coord = 0
     e_coord = 0
 
-    with open('data/raw/combined.csv') as file:
+    with open('data/raw-2/combined.csv') as file:
         for line in file.readlines():
             line = line.strip()
             values = line.split(";")
@@ -89,13 +66,13 @@ def generate_dataset_gps():
                 measurements.append(measurement)
 
     df = pd.DataFrame(measurements)
-    df.to_csv('data/dataset_w_gps.csv', index=False)
+    df.to_csv('data/dataset_2_w_gps.csv', index=False)
 
 generate_dataset_gps()
  
 FIGURE_DIRECTORY = "figures/"
 
-df = pd.read_csv('data/dataset_w_gps.csv')
+#df = pd.read_csv('data/dataset_1_w_gps.csv')
 
 def plot_tx_powers(angle): 
 
@@ -120,11 +97,28 @@ def plot_tx_powers(angle):
     #plt.savefig(FIGURE_DIRECTORY + file_name + ".png", bbox_inches = "tight")
     plt.show()
 
-plot_tx_powers(0)
-plot_tx_powers(90)
+#plot_tx_powers(0)
+#plot_tx_powers(90)
 
 
+def plot_rssi(distance, tx_power, angle):
+    df = pd.read_csv('data/dataset-1.csv')
+    df2 = df[(df.angle == angle) & (df.tx_power == tx_power) & (df.distance == distance)]
+    plt.figure()
+    df2 = df2.drop('angle', axis=1)
+    df2 = df2.drop('tx_power', axis=1)
+    df2 = df2.drop('distance', axis=1)
+    ax = sns.distplot(df2)
+    plt.show()
 
-
-
-
+def plot_rssi_scatter(tx_power, angle):
+    df = pd.read_csv('data/dataset-1.csv')
+    df2 = df[(df.angle == angle) & (df.tx_power == tx_power)]
+    plt.figure()
+    df2 = df2.drop('angle', axis=1)
+    df2 = df2.drop('tx_power', axis=1)
+    df2 = df2.groupby(['distance', 'rssi']).size().reset_index(name="count")
+    print(df2.head(1000))
+    ax = sns.scatterplot(data=df2, x='distance', y='rssi', hue='count', size='count')
+    plt.show()
+#plot_rssi_scatter(-8, 0)
