@@ -101,7 +101,7 @@ typedef struct {
     bool isLogging; 
 }logger_state_t; 
 
-logger_state_t logger_state = {true, false, 0}; //init 
+logger_state_t logger_state = {true, false}; //init 
 
 static sos_log_logger_t sos_logger;
 

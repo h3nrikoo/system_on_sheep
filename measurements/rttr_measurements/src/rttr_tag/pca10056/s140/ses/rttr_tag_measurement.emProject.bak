@@ -56,7 +56,6 @@
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/hardfault/hardfault_implementation.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/util/nrf_assert.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/atomic_fifo/nrf_atfifo.c" />
-      <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/atomic_flags/nrf_atflags.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/atomic/nrf_atomic.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/balloc/nrf_balloc.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/external/fprintf/nrf_fprintf.c" />
@@ -67,6 +66,7 @@
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/experimental_section_vars/nrf_section_iter.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/sortlist/nrf_sortlist.c" />
       <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/strerror/nrf_strerror.c" />
+      <file file_name="$(SDK_ROOT:../../../../../..)/components/libraries/atomic_flags/nrf_atflags.c" />
     </folder>
     <folder Name="None">
       <file file_name="$(SDK_ROOT:../../../../../..)/modules/nrfx/mdk/ses_startup_nrf52840.s" />
