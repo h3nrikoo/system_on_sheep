@@ -1,0 +1,3 @@
+[submodule "sheep_dist_2020"]
+	path = sheep_dist_2020
+	url = https://github.com/jonathannilsen/sheep_dist_2020.git

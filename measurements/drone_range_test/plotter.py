@@ -68,11 +68,16 @@ def generate_dataset_gps():
     df = pd.DataFrame(measurements)
     df.to_csv('data/dataset_2_w_gps.csv', index=False)
 
-generate_dataset_gps()
+# generate_dataset_gps()
  
 FIGURE_DIRECTORY = "figures/"
 
-#df = pd.read_csv('data/dataset_1_w_gps.csv')
+DATASET = 2
+
+if DATASET == 1:
+    df = pd.read_csv('data/dataset_1_w_gps.csv')
+else:
+    df = pd.read_csv('data/dataset_2_w_gps.csv')
 
 def plot_tx_powers(angle): 
 
@@ -89,16 +94,18 @@ def plot_tx_powers(angle):
     sns.barplot(ax=ax,palette='Paired', data=df2, x='th_dist', y='pdr', hue='tx_power')
     # ax = sns.lineplot(palette='Paired', data=df2, x='distance', y='pdr', hue='tx_power')
     ax.set(xlabel='Distance [m]', ylabel='PDR')
-    ax.set_title('Tx powers, ' + str(angle) + "deg")
+    ax.set_title('Tx powers, ' + str(angle) + "deg, attempt " + str(DATASET))
     plt.legend(title = "Tx_power [dBm]", bbox_to_anchor=(1,1), borderaxespad=0)
-    #file_name = "tx_powers_" + str(angle) + "deg"
+    file_name = "tx_powers_" + str(angle) + "deg_attempt" + str(DATASET)
 
     # df2.to_csv(CSV_DIRECTORY + file_name + ".csv", index = False)
-    #plt.savefig(FIGURE_DIRECTORY + file_name + ".png", bbox_inches = "tight")
+    plt.savefig(FIGURE_DIRECTORY + file_name + ".png", bbox_inches = "tight")
     plt.show()
 
-#plot_tx_powers(0)
-#plot_tx_powers(90)
+plot_tx_powers(0)
+plot_tx_powers(90)
+
+
 
 
 def plot_rssi(distance, tx_power, angle):
