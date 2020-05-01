@@ -62,6 +62,7 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+#define ADV_START_DELAY_MS 100
 
 #define DEFAULT_TAG_ID 0xA 
 #define ID_LED_INDEX_0 BSP_BOARD_LED_3 
@@ -103,6 +104,7 @@ static uint8_t              m_enc_advdata[2][BLE_GAP_ADV_SET_DATA_SIZE_MAX];  /*
 static uint32_t             m_advdata_index = 0;
 
 APP_TIMER_DEF(m_adv_restart_timer); //Timer for restarting advertising 
+APP_TIMER_DEF(m_adv_start_delay_timer); 
 
 /**@brief Struct that contains pointers to the encoded advertising data. */
 static ble_gap_adv_data_t m_adv_data =
@@ -284,8 +286,10 @@ static void bsp_event_callback(bsp_event_t event)
             if(!isTransmitting){
                   isTransmitting = true; 
                   bsp_board_led_off(IDLE_LED);
-                  advertising_start(custom_adv_param);
-                  NRF_LOG_INFO("RUNNING...")
+                  //advertising_start(custom_adv_param);
+                  //NRF_LOG_INFO("RUNNING...")
+                  APP_ERROR_CHECK(app_timer_start(m_adv_start_delay_timer, APP_TIMER_TICKS(ADV_START_DELAY_MS), NULL));
+                  
             }
             break; 
         }
@@ -342,6 +346,15 @@ static void adv_restart_timer_handler(void * p_context)
     }
 }
 
+//Runs automatically when the delay after adv start is completed 
+static void adv_start_delay_timer_handler(void * p_context)
+{
+    UNUSED_PARAMETER(p_context);
+    NRF_LOG_INFO("RUNNING...")
+    advertising_start(custom_adv_param);
+}
+
+
 /**@brief Function for initializing timers. */
 static void timers_init(void)
 {
@@ -351,6 +364,9 @@ static void timers_init(void)
     APP_ERROR_CHECK(err_code);
 
     err_code = app_timer_create(&m_adv_restart_timer, APP_TIMER_MODE_SINGLE_SHOT, adv_restart_timer_handler);
+    APP_ERROR_CHECK(err_code);
+
+    err_code = app_timer_create(&m_adv_start_delay_timer, APP_TIMER_MODE_SINGLE_SHOT, adv_start_delay_timer_handler);
     APP_ERROR_CHECK(err_code);
 }
 
