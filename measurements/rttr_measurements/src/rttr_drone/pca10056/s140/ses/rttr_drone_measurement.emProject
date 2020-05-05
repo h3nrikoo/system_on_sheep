@@ -106,9 +106,10 @@
       <file file_name="../../../main.c" />
       <file file_name="../../../sos_log.c" />
       <file file_name="../../../sos_log.h" />
-      <file file_name="$(RTTR_ROOT:../../../../../../../sheep_dist_2020)/service/src/ble_rttrs.c" />
       <file file_name="$(RTTR_ROOT:../../../../../../../sheep_dist_2020)/protocol/src/rttr.c" />
       <file file_name="$(RTTR_ROOT:../../../../../../../sheep_dist_2020)/util/src/rttr_helper.c" />
+      <file file_name="$(RTTR_ROOT:../../../../../../../sheep_dist_2020)/service/src/ble_rttrs_c.c" />
+      <file file_name="$(RTTR_ROOT:../../../../../../../sheep_dist_2020)/util/src/rttr_util.c" />
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="$(SDK_ROOT:../../../../../..)/external/segger_rtt/SEGGER_RTT.c" />
