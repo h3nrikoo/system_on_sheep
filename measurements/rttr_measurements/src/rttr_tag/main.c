@@ -72,14 +72,17 @@
  * Macros
  *****************************************************************************/
 
-#define IDLE_LED                        BSP_BOARD_LED_0
-#define SERIES_LED                      BSP_BOARD_LED_1
-#define RTTR_LED                        BSP_BOARD_LED_2
-#define TIMEOUT_LED                     BSP_BOARD_LED_3 
+#define SERIES_LED                      BSP_BOARD_LED_0 //LED1
+#define IDLE_LED                        BSP_BOARD_LED_1 //LED2
+#define RTTR_LED                        BSP_BOARD_LED_2 //LED3
+#define TIMEOUT_LED                     BSP_BOARD_LED_3 //LED4
 
-#define ADV_START_BSP_EVENT             BSP_EVENT_KEY_0
+#define ID_LED_INDEX_0                  BSP_BOARD_LED_2 //LED3
+#define ID_LED_INDEX_1                  BSP_BOARD_LED_0 //LED1
+
+#define ADV_START_BSP_EVENT             BSP_EVENT_KEY_2 //BTN 3 
 #define ID_INCREMENT_BSP_EVENT          BSP_EVENT_KEY_1
-#define ID_DECREMENT_BSP_EVENT          BSP_EVENT_KEY_3
+#define ID_DECREMENT_BSP_EVENT          BSP_EVENT_KEY_0
 
 #define APP_BLE_CONN_CFG_TAG            1                                  /**< A tag identifying the SoftDevice BLE configuration. */
 #define APP_BLE_OBSERVER_PRIO           3                                  /**< BLE observer priority of the application. There is no need to modify this value. */
@@ -122,7 +125,7 @@
 typedef struct
 {
    uint8_t tag_id;
-   uint8_t tx_power_index; 
+   //uint8_t tx_power_index; 
    uint8_t measure_num; 
 }
 custom_adv_param_t; 
@@ -154,22 +157,18 @@ static uint32_t                 m_enc_advdata_idx = 0;
 
 static uint8_t m_beacon_info[] =                    /**< Information advertised by the Beacon. */
 {
-    TAG_ID_DEFAULT,
-    TX_POWER_INDEX_DEFAULT, 
+    TAG_ID_DEFAULT, 
     0
 };
 
 static custom_adv_param_t       m_custom_adv_param = {
     .tag_id = TAG_ID_DEFAULT,
-    .tx_power_index = TX_POWER_INDEX_DEFAULT,
     .measure_num = 0
 };
 
 static ble_advdata_t            m_advdata;
 static ble_advdata_manuf_data_t m_manuf_specific_data;
 static ble_gap_adv_params_t     m_adv_params;
-
-//APP_TIMER_DEF(m_adv_restart_timer); //Timer for restarting advertising 
 
 
 /**@brief Struct that contains pointers to the encoded advertising data. */
@@ -187,7 +186,7 @@ static ble_gap_adv_data_t m_gap_adv_data =
     }
 };
 
-static int8_t tx_power_dBm[] = {-8, -4, 0, 3, 4}; //possible tx powers in dBm
+//static int8_t tx_power_dBm[] = {-8, -4, 0, 3, 4}; //possible tx powers in dBm
 static bool m_adv_ready = false;
 
 /*
@@ -308,8 +307,7 @@ static void advertising_start(custom_adv_param_t * p_param)
     m_adv_ready = false;
 
     m_beacon_info[0] = p_param->tag_id;
-    m_beacon_info[1] = p_param->tx_power_index;
-    m_beacon_info[2] = p_param->measure_num;
+    m_beacon_info[1] = p_param->measure_num;
 
     advdata_index_next();
     
@@ -323,7 +321,7 @@ static void advertising_start(custom_adv_param_t * p_param)
 
     err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_ADV,
                                        m_adv_handle,
-                                       tx_power_dBm[p_param->tx_power_index]);
+                                       APP_BLE_TX_POWER_DEFAULT);
     APP_ERROR_CHECK(err_code);
 
     err_code = sd_ble_gap_adv_start(m_adv_handle, APP_BLE_CONN_CFG_TAG);
@@ -331,14 +329,14 @@ static void advertising_start(custom_adv_param_t * p_param)
 
     bsp_board_led_off(IDLE_LED);
     bsp_board_led_off(TIMEOUT_LED);
-    err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
+    //err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
     APP_ERROR_CHECK(err_code);
 }
 
 
 static void tag_id_leds_set(void)
 {
-#if 0
+#if 1
     switch (m_custom_adv_param.tag_id)
     {
         case 0xA:
@@ -400,10 +398,13 @@ static inline void tag_id_decrement(void)
 
 
 static void timeout_handle(void)
-{
+{   
+    //ret_code_t err_code = bsp_indication_set(BSP_INDICATE_IDLE);
+    //APP_ERROR_CHECK(err_code);
     bsp_board_led_off(SERIES_LED);
     bsp_board_led_on(IDLE_LED);
     bsp_board_led_on(TIMEOUT_LED);
+    tag_id_leds_set();
     m_adv_ready = true;
 }
 
@@ -447,6 +448,8 @@ static void bsp_event_callback(bsp_event_t event)
             if (m_adv_ready)
             {
                 advertising_start(&m_custom_adv_param);
+                bsp_board_led_off(ID_LED_INDEX_0);
+                bsp_board_led_off(ID_LED_INDEX_1);
                 NRF_LOG_INFO("RUNNING...")
             }
             else
@@ -534,6 +537,7 @@ static void timers_init(void)
 static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
     ret_code_t err_code;
+    static bool measurement_series_started = false; 
 
     switch (p_ble_evt->header.evt_id)
     {
@@ -543,12 +547,12 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_CONN,
                                                m_conn_handle,
-                                               tx_power_dBm[m_custom_adv_param.tx_power_index]);
+                                               APP_BLE_TX_POWER_DEFAULT);
             APP_ERROR_CHECK(err_code);
 
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
-            bsp_indication_set(BSP_INDICATE_IDLE);
+            //bsp_indication_set(BSP_INDICATE_IDLE);
             break;
         }
 
@@ -559,13 +563,21 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             if (!rttr_helper_ready(&m_rttr))
             {
                 m_adv_ready = true;
+                measurement_series_started = false; 
                 bsp_board_led_off(SERIES_LED);
                 bsp_board_led_on(IDLE_LED);
-                NRF_LOG_INFO("Disconnected, RTTR disabled.");
+                tag_id_leds_set();
+                m_custom_adv_param.measure_num++; 
+                NRF_LOG_INFO("Disconnected, RTTR disabled. (5 x Measurement Series completed)");
             }
             else
-            {
-                bsp_board_led_on(SERIES_LED);
+            {   
+                if(measurement_series_started == false)
+                {
+                    measurement_series_started = true; 
+                    bsp_board_led_on(SERIES_LED);
+                }
+
                 NRF_LOG_INFO("Disconnected, RTTR enabled.");
             }
             break;
@@ -575,6 +587,13 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         {
             timeout_handle();
             NRF_LOG_INFO("Advertising timed out.");
+            //TODO: logic for when a timeout occor during a measurement series?
+            if(measurement_series_started) 
+            {
+                bsp_board_led_off(SERIES_LED);
+                measurement_series_started = false; 
+                m_custom_adv_param.measure_num++; 
+            }
             break;
         }
 
@@ -793,7 +812,7 @@ int main(void)
     m_adv_ready = true;
 
     bsp_board_led_on(IDLE_LED);
-    NRF_LOG_INFO("RTTR Tag started. Press Button 1 to start advertising.");
+    NRF_LOG_INFO("RTTR Tag started. Press Button 3 to start advertising.");
     tag_id_log();
 
     // Enter main loop.

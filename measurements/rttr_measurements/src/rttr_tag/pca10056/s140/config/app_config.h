@@ -23,4 +23,5 @@
 // Logging does not work in SES without this define
 #define NRF_FPRINTF_FLAG_AUTOMATIC_CR_ON_LF_ENABLED 0
 
+
 #endif

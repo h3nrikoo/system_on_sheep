@@ -75,10 +75,10 @@
 - LED4: timeout during 
 */
 
-#define SCANNING_LED                BSP_BOARD_LED_0
-#define SERIES_LED                  BSP_BOARD_LED_1
-#define RTTR_LED                    BSP_BOARD_LED_2
-#define TIMEOUT_LED                 BSP_BOARD_LED_3
+#define SERIES_LED                      BSP_BOARD_LED_0 //LED1
+#define SCANNING_LED                    BSP_BOARD_LED_1 //LED2
+#define RTTR_LED                        BSP_BOARD_LED_2 //LED3
+#define TIMEOUT_LED                     BSP_BOARD_LED_3 //LED4
 
 #define APP_BLE_PHY                 BLE_GAP_PHY_CODED                   /**< The primary PHY used for scanning/connections. */
 #define APP_BLE_TX_POWER_DEFAULT    3                                   /**< The default TX power in dBm used for advertising/connections. */
@@ -117,9 +117,9 @@
 typedef struct
 {
     uint8_t tag_id;
-    int8_t TXpower;
-    int8_t rssi;
     uint8_t measure_num;
+    int8_t rssi;
+    
 }
 tag_packet_t;
 
@@ -320,8 +320,6 @@ static void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_seria
 }
 
 
-
-
 /**@brief Function for handling asserts in the SoftDevice.
  *
  * @details This function is called in case of an assert in the SoftDevice.
@@ -338,50 +336,12 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     app_error_handler(0xDEADBEEF, line_num, p_file_name);
 }
 
-//static void print_state(logger_state_t state, tag_packet_t info) {
-//    if(state.isLogging) {
-//         NRF_LOG_INFO("---LOGGING MODE---"); 
-//         NRF_LOG_INFO("TX RADIO POWER:\t\t%idBm", info.TXpower); 
-//         NRF_LOG_INFO("RSSI:\t\t\t\%idBm", info.rssi);
-//        if(info.height == HIGH_2M) {
-//            NRF_LOG_INFO("HEIGHT:\t\t\t2 m;");
-//        } else {
-//            NRF_LOG_INFO("HEIGHT:\t\t\t70 cm");
-//        }
-//        if(info.rotation == DEG90) {
-//            NRF_LOG_INFO("ROTATION:\t\t\t90 DEG");   
-//        } else if(packet_info.rotation == DEG45){
-//            NRF_LOG_INFO("ROTATION:\t\t\t45 DEG");
-//        } else {
-//        NRF_LOG_INFO("ROTATION:\t\t\t0 DEG");
-//        }
-//        return; 
-//    }
-//    
-//    char *str_sym; 
-//
-//    if(state.isCoded_phy) {
-//        str_sym = "125 ksym/s";
-//    } else {
-//        str_sym = "1 Msym/s";
-//    }
-//
-//    NRF_LOG_INFO("----INPUT MODE----"); 
-//    NRF_LOG_INFO("%s", (uint32_t)str_sym);
-//    NRF_LOG_INFO("Btn1 toggle logger/input mode");
-//    NRF_LOG_INFO("Btn3 toggle 1 Msym/s and 125 ksym/s"); 
-//} 
-
-
 void log_sheepinfo()
 {
     sos_radio_measurement_t measurement = {
         .tag_id = m_packet_info.tag_id,
-        .tx_power = m_packet_info.TXpower,
         .rssi = m_packet_info.rssi,
         .measure_num = m_packet_info.measure_num
-       // .height = m_packet_info.height,
-       // .rotation = m_packet_info.rotation
     };
     int err = sos_log_radio_measurement(&sos_logger, measurement);
 }
@@ -413,13 +373,19 @@ static inline bool rttr_series_state_done(void)
     return m_series_state.series_done;
 }
 
+static bool measurement_series_started = false; 
 
 static void rttr_series_timeout_handle(void)
 {
     // Reset series state
     rttr_series_state_init();
-    bsp_board_led_off(SERIES_LED);
-    bsp_board_led_on(TIMEOUT_LED);
+    if(measurement_series_started) 
+    {
+        NRF_LOG_INFO("Series timed out.");
+        measurement_series_started = false;
+        bsp_board_led_on(TIMEOUT_LED);
+        bsp_board_led_off(SERIES_LED);
+    }
 }
 
 
@@ -470,8 +436,7 @@ static inline void tag_adv_packet_parse(ble_gap_evt_adv_report_t const * p_adv_r
                                         tag_packet_t * p_info)
 {
     p_info->tag_id = p_adv_report->data.p_data[7];
-    p_info->TXpower = tx_power_dBm[p_adv_report->data.p_data[8]];
-    p_info->measure_num = p_adv_report->data.p_data[9];
+    p_info->measure_num = p_adv_report->data.p_data[8];
     p_info->rssi = p_adv_report->rssi;
 }
 
@@ -489,8 +454,6 @@ static void ble_adv_report_handle(ble_gap_evt_t const * p_gap_evt)
     if (manufacturer_id == SHEEP_TAG_ID)
     {
         tag_adv_packet_parse(p_adv_report, &m_packet_info);
-
-        //NRF_LOG_INFO("ID: %i, measurement: %i, tx_power: %i", m_packet_info.tag_id, m_packet_info.measure_num, m_packet_info.TXpower); 
 
         //log_sheepinfo();
 
@@ -739,7 +702,7 @@ void bsp_event_callback(bsp_event_t event)
     {
         case BSP_EVENT_KEY_0:
         {   
-            sos_logger.save_flag = true;
+            //sos_logger.save_flag = true;
             break;
         }
         case BSP_EVENT_KEY_1:
@@ -747,11 +710,7 @@ void bsp_event_callback(bsp_event_t event)
             break; 
         }
         case BSP_EVENT_KEY_2: 
-        {
-//            if(!logger_state.isLogging) {
-//                logger_state.isCoded_phy = !logger_state.isCoded_phy;  
-//                print_state(logger_state, m_packet_info); 
-//            } 
+        { 
             break; 
         }
         case BSP_EVENT_KEY_3: 
@@ -895,6 +854,7 @@ static inline void handle_finished_evt(rttr_helper_evt_t * p_evt)
 }
 
 
+
 static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
                                    rttr_helper_evt_t * p_evt)
 {
@@ -905,7 +865,8 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
         case RTTR_HELPER_EVT_CONNECTED:
         {
             if (!rttr_series_state_done())
-            {
+            {   
+                measurement_series_started = true; 
                 bsp_board_led_on(SERIES_LED);
                 err_code = rttr_helper_enable(&m_rttr,
                                               &m_series_state.sample_buffer[0],
@@ -913,7 +874,8 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
                 APP_ERROR_CHECK(err_code);
             }
             else
-            {
+            {   
+                measurement_series_started = false; 
                 bsp_board_led_off(SERIES_LED);
                 // Disconnect without enabling RTTR to tell the peer that the rttr series is done
                 err_code = sd_ble_gap_disconnect(m_conn_handle,
