@@ -12,8 +12,8 @@
 #ifdef DEBUG
 #define RTTR_DEBUG
 #endif
-#define RTTR_HELPER_FEATURE_RESPONDER
-#define BLE_RTTRS_BLE_OBSERVER_PRIO 2
+#define RTTR_HELPER_FEATURE_INITIATOR
+#define BLE_RTTRS_C_BLE_OBSERVER_PRIO 2
 
 // Logging does not work in SES without this define
 #define NRF_FPRINTF_FLAG_AUTOMATIC_CR_ON_LF_ENABLED 0
