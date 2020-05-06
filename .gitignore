@@ -5,4 +5,5 @@
 **.jlink 
 **.emSession 
 Output/ 
-
+**.idea/
+**venv/
