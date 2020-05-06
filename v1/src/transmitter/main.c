@@ -62,11 +62,8 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-#define ADV_START_DELAY_MS 100
-
-#define DEFAULT_TAG_ID 0xA 
-#define ID_LED_INDEX_0 BSP_BOARD_LED_3 
-#define ID_LED_INDEX_1 BSP_BOARD_LED_2 
+#define TAG_ID 0xA
+#define TX_POWER 3
 
 #define IDLE_LED BSP_BOARD_LED_1 //LED2
 
@@ -75,18 +72,12 @@
 #define APP_BLE_OBSERVER_PRIO           3                                  /**< BLE observer priority of the application. There is no need to modify this value. */
 
 
-#define ADV_INT_MS                      20
+#define ADV_INT_MS                      100
 #define NON_CONNECTABLE_ADV_INTERVAL    MSEC_TO_UNITS(ADV_INT_MS, UNIT_0_625_MS)  /**< The advertising interval for non-connectable advertisement (100 ms). This value can vary between 100ms to 10.24s). */
-
-#define NUM_ADV_PACKETS                 100
-
-#define ADV_TIMEOUT                     (ADV_INT_MS * (NUM_ADV_PACKETS + 0.7))/10
 
 
 #define APP_BEACON_INFO_LENGTH          0x17                               /**< Total length of information advertised by the Beacon. */
 #define APP_ADV_DATA_LENGTH             0x15                               /**< Length of manufacturer specific data in the advertisement. */
-//#define APP_DEVICE_TYPE                 0x03                               /**< 0x02 refers to Beacon. */
-//#define APP_MEASURED_RSSI               0xC3                               /**< The Beacon's measured RSSI at 1 meter distance in dBm. */
 #define APP_COMPANY_IDENTIFIER          0xBAAA                             /**< Company identifier for Nordic Semiconductor ASA. as per www.bluetooth.org. */
 #define APP_MAJOR_VALUE                 0x01, 0x02                         /**< Major value used to identify Beacons. */
 #define APP_MINOR_VALUE                 0x03, 0x04                         /**< Minor value used to identify Beacons. */
@@ -132,21 +123,15 @@ static void advdata_index_next(void)
 typedef struct
 {  
    uint8_t tag_id; 
-   uint8_t tx_power_index; 
-   uint8_t measure_num; 
 }custom_adv_param_t; 
 
 #define DEFAULT_TX_POWER_INDEX 0 
 
-static int8_t tx_power_dBm[] = {-8, -4, 0, 3, 4}; //possible tx powers in dBm 
-
-static custom_adv_param_t custom_adv_param = {DEFAULT_TAG_ID, DEFAULT_TX_POWER_INDEX, 0}; 
+static custom_adv_param_t custom_adv_param = {TAG_ID};
 
 static uint8_t m_beacon_info[] =                    /**< Information advertised by the Beacon. */
 {   
-    DEFAULT_TAG_ID,
-    DEFAULT_TX_POWER_INDEX, 
-    0
+    TAG_ID
 };
 
 
@@ -174,7 +159,7 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 static ble_advdata_t advdata;
 static ble_advdata_manuf_data_t manuf_specific_data;
 
-static void advertising_init(void)
+static void advertising_start(void)
 {
     uint32_t      err_code;
     uint8_t       flags = BLE_GAP_ADV_FLAG_BR_EDR_NOT_SUPPORTED;
@@ -202,156 +187,27 @@ static void advertising_init(void)
     m_adv_params.p_peer_addr     = NULL;    // Undirected advertisement.
     m_adv_params.filter_policy   = BLE_GAP_ADV_FP_ANY;
     m_adv_params.interval        = NON_CONNECTABLE_ADV_INTERVAL;
-    m_adv_params.duration        = (uint16_t)ADV_TIMEOUT;  //  time out in 10ms units.
+    m_adv_params.duration        = 0;
 
     err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
     APP_ERROR_CHECK(err_code);
 
     err_code = sd_ble_gap_adv_set_configure(&m_adv_handle, &m_adv_data, &m_adv_params);
     APP_ERROR_CHECK(err_code);
-}
 
-
-static void advertising_start(custom_adv_param_t param)
-{   
-    ret_code_t err_code;
-     
-    m_beacon_info[0] = param.tag_id; 
-    m_beacon_info[1] = param.tx_power_index; 
-    m_beacon_info[2] = param.measure_num; 
-
-    advdata_index_next();
-
-    err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_ADV, m_adv_handle, tx_power_dBm[param.tx_power_index]); 
-    APP_ERROR_CHECK(err_code);
-    
-    err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
-    APP_ERROR_CHECK(err_code);
-
-    err_code = sd_ble_gap_adv_set_configure(&m_adv_handle, &m_adv_data, &m_adv_params);
-    APP_ERROR_CHECK(err_code);
-
-    err_code = sd_ble_gap_adv_start(m_adv_handle, APP_BLE_CONN_CFG_TAG);
+    err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_ADV, m_adv_handle, TX_POWER); 
     APP_ERROR_CHECK(err_code);
 
     err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
     APP_ERROR_CHECK(err_code);
 }
 
-static void update_tag_id(bool increase) {
-    if(increase) {
-        if(custom_adv_param.tag_id < 0xD){
-            custom_adv_param.tag_id++;
-        }
-    } else {
-        if(custom_adv_param.tag_id > 0xA) {
-            custom_adv_param.tag_id--; 
-        }
-    }
-    switch(custom_adv_param.tag_id) {
-        case 0xA: 
-            bsp_board_led_off(ID_LED_INDEX_0); 
-            bsp_board_led_off(ID_LED_INDEX_1);
-            break; 
-        case 0xB:
-            bsp_board_led_on(ID_LED_INDEX_0); 
-            bsp_board_led_off(ID_LED_INDEX_1);
-            break; 
-        case 0xC: 
-            bsp_board_led_off(ID_LED_INDEX_0); 
-            bsp_board_led_on(ID_LED_INDEX_1);
-            break; 
-        case 0xD: 
-            bsp_board_led_on(ID_LED_INDEX_0); 
-            bsp_board_led_on(ID_LED_INDEX_1);
-            break; 
-        default: 
-            bsp_board_led_off(ID_LED_INDEX_0); 
-            bsp_board_led_off(ID_LED_INDEX_1);
-            break; 
-     }
-
-    NRF_LOG_INFO("ID %i, measurement %i, START? Btn1 to confirm", custom_adv_param.tag_id, custom_adv_param.measure_num);
-}
-
-
-static bool isTransmitting = false; //Flag to disable button press during transmission 
-
-static void bsp_event_callback(bsp_event_t event)
-{
-    switch (event)
-    {
-        case BSP_EVENT_KEY_0:
-        {   
-            if(!isTransmitting){
-                  isTransmitting = true; 
-                  bsp_board_led_off(IDLE_LED);
-                  //advertising_start(custom_adv_param);
-                  //NRF_LOG_INFO("RUNNING...")
-                  APP_ERROR_CHECK(app_timer_start(m_adv_start_delay_timer, APP_TIMER_TICKS(ADV_START_DELAY_MS), NULL));
-                  
-            }
-            break; 
-        }
-        case BSP_EVENT_KEY_1:
-        {
-            if(!isTransmitting){
-                update_tag_id(true); 
-            } 
-            break; 
-        }
-        case BSP_EVENT_KEY_2: 
-        {
-            //NOP
-
-            break; 
-        }
-        case BSP_EVENT_KEY_3: 
-        {
-            if(!isTransmitting){
-                update_tag_id(false); 
-            }  
-            break; 
-        }
-        default:
-        {
-            break;
-        }
-    }
-}
 
 /* Function for initializing LEDs and buttons. */
-static void leds_n_btns_init(void)
+static void leds_init(void)
 {
-    ret_code_t err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_event_callback);
+    ret_code_t err_code = bsp_init(BSP_INIT_LEDS, NULL);
     APP_ERROR_CHECK(err_code);
-}
-
-
-//Runs automatically when the advertising duration is timed out 
-static void adv_restart_timer_handler(void * p_context)
-{
-    UNUSED_PARAMETER(p_context);
-    
-    custom_adv_param.tx_power_index++;
-
-    if(custom_adv_param.tx_power_index < sizeof(tx_power_dBm)/sizeof(int8_t)) {
-        advertising_start(custom_adv_param);
-    } else {
-        custom_adv_param.tx_power_index = 0; 
-        custom_adv_param.measure_num++;
-        NRF_LOG_INFO("ID %i, measurement %i, START? Btn1 to confirm", custom_adv_param.tag_id, custom_adv_param.measure_num);
-        isTransmitting = false; 
-        bsp_board_led_on(IDLE_LED);
-    }
-}
-
-//Runs automatically when the delay after adv start is completed 
-static void adv_start_delay_timer_handler(void * p_context)
-{
-    UNUSED_PARAMETER(p_context);
-    NRF_LOG_INFO("RUNNING...")
-    advertising_start(custom_adv_param);
 }
 
 
@@ -362,24 +218,7 @@ static void timers_init(void)
 
     err_code = app_timer_init();
     APP_ERROR_CHECK(err_code);
-
-    err_code = app_timer_create(&m_adv_restart_timer, APP_TIMER_MODE_SINGLE_SHOT, adv_restart_timer_handler);
-    APP_ERROR_CHECK(err_code);
-
-    err_code = app_timer_create(&m_adv_start_delay_timer, APP_TIMER_MODE_SINGLE_SHOT, adv_start_delay_timer_handler);
-    APP_ERROR_CHECK(err_code);
 }
-
-static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
-{
-    if(p_ble_evt->header.evt_id == BLE_GAP_EVT_ADV_SET_TERMINATED) 
-    {
-       APP_ERROR_CHECK(app_timer_start(m_adv_restart_timer, APP_TIMER_TICKS(ADV_INT_MS), NULL));
-    }
-}
-
-NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
-
 
 /* Initializes the SoftDevice and the BLE event interrupt */ 
 static void ble_stack_init(void)
@@ -442,16 +281,11 @@ int main(void)
     // Initialize.
     log_init();
     timers_init();
-    leds_n_btns_init();
+    leds_init();
 
     power_management_init();
     ble_stack_init();
-    advertising_init();
-
-    // Start execution.
-    NRF_LOG_INFO("ID %i, measurement %i, START? Btn1 to confirm", custom_adv_param.tag_id, custom_adv_param.measure_num);
-
-    bsp_board_led_on(IDLE_LED);
+    advertising_start();
 
     // Enter main loop.
     while(1)
