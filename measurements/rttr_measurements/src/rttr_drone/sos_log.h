@@ -44,6 +44,8 @@ typedef struct {
     int32_t variance;
     uint16_t success_count;
     uint16_t expected_count;
+    char latitude[SOS_LOG_LATITUDE_LEN];
+    char longitude[SOS_LOG_LONGITUDE_LEN];
 } sos_rttr_measurement_t;
 
 typedef struct {

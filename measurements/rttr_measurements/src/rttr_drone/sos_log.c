@@ -26,6 +26,8 @@ void sos_log_clear(sos_log_logger_t* logger) {
 int sos_log_rttr_measurement(sos_log_logger_t* logger, sos_rttr_measurement_t measurement) {
     if (logger->n_rttr_measurements < SOS_LOG_MAX_RTTR_ELEMENTS) {
         measurement.measurement_series = logger->current_measurement_series;
+        strncpy(measurement.latitude, logger->last_gps_position.latitude, SOS_LOG_LATITUDE_LEN);
+        strncpy(measurement.longitude, logger->last_gps_position.longitude, SOS_LOG_LONGITUDE_LEN);
         logger->rttr_measurements[logger->n_rttr_measurements] = measurement;
         logger->n_rttr_measurements++;
         if (logger->n_rttr_measurements > SOS_LOG_MAX_RTTR_ELEMENTS - 20) {
@@ -156,8 +158,8 @@ int sos_log_save(sos_log_logger_t* logger) {
             measurement.variance,
             measurement.success_count,
             measurement.expected_count,
-            logger->last_gps_position.latitude,
-            logger->last_gps_position.longitude
+            measurement.latitude,
+            measurement.longitude
         );
         ff_result = f_write(&file, log_buffer, length, (UINT *) &bytes_written);
         if (ff_result) {
