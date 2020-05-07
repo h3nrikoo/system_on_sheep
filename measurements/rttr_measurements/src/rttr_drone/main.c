@@ -301,7 +301,7 @@ static void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_seria
         case NRF_SERIAL_EVENT_DRV_ERR:
         {
             NRF_LOG_ERROR("NRF_SERIAL_EVENT_DRV_ERR\n");
-            if (sos_logger.n_total_measurements > 0)
+            if (sos_logger.n_rttr_measurements > 0)
             {
                 sos_logger.save_flag = true;
             }
@@ -335,17 +335,6 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 {
     app_error_handler(0xDEADBEEF, line_num, p_file_name);
 }
-
-void log_sheepinfo()
-{
-    sos_radio_measurement_t measurement = {
-        .tag_id = m_packet_info.tag_id,
-        .rssi = m_packet_info.rssi,
-        .measure_num = m_packet_info.measure_num
-    };
-    int err = sos_log_radio_measurement(&sos_logger, measurement);
-}
-
 
 static void rttr_series_state_init(void)
 {
@@ -383,6 +372,8 @@ static void rttr_series_timeout_handle(void)
     {
         NRF_LOG_INFO("Series timed out.");
         measurement_series_started = false;
+        
+        sos_log_end_measurement_series(&sos_logger);
         bsp_board_led_on(TIMEOUT_LED);
         bsp_board_led_off(SERIES_LED);
     }
@@ -455,7 +446,6 @@ static void ble_adv_report_handle(ble_gap_evt_t const * p_gap_evt)
     {
         tag_adv_packet_parse(p_adv_report, &m_packet_info);
 
-        //log_sheepinfo();
 
         if (m_series_state.tag_id == TAG_ID_INVALID ||
             m_series_state.tag_id == m_packet_info.tag_id)
@@ -702,7 +692,7 @@ void bsp_event_callback(bsp_event_t event)
     {
         case BSP_EVENT_KEY_0:
         {   
-            //sos_logger.save_flag = true;
+            sos_logger.save_flag = true;
             break;
         }
         case BSP_EVENT_KEY_1:
@@ -756,11 +746,12 @@ static void serial_init(void)
     //(void)nrf_serial_write(&serial1_uarte, &c, sizeof(c), NULL, 1000);
 }
 
-static void sos_log_process(void)
+static bool log_process_flag = false;
+
+static void log_process(void)
 {
-    // FIXME: The below is just for testing. Add proper SD card save.
-    if (sos_logger.save_flag)
-    {
+    if (log_process_flag) {
+
         uint32_t ticks = (uint32_t) MAX(m_rttr_report_entry.mean, 0);
         uint32_t distance = rttr_distance_calculate(ticks);
 
@@ -770,7 +761,7 @@ static void sos_log_process(void)
             RTTR_SERIES_COUNT,
             m_rttr_report_entry.measurement + 1,
             m_series_length);
-
+    
         NRF_LOG_INFO("Est: %d m - Mean: %d, Var: %d, Cnt: %d/%d, ",
             distance,
             m_rttr_report_entry.mean,
@@ -778,9 +769,18 @@ static void sos_log_process(void)
             m_rttr_report_entry.success_count,
             m_rttr_report_entry.expected_count);
 
-        sos_logger.save_flag = false;
+        sos_rttr_measurement_t measurement;
+        measurement.tag_id = m_rttr_report_entry.tag_id;
+        measurement.series = m_rttr_report_entry.series + 1;
+        measurement.measurement = m_rttr_report_entry.measurement + 1;
+        measurement.distance = distance;
+        measurement.mean = m_rttr_report_entry.mean;
+        measurement.variance = m_rttr_report_entry.variance;
+        measurement.success_count = m_rttr_report_entry.success_count;
+        measurement.expected_count = m_rttr_report_entry.expected_count;
+        sos_log_rttr_measurement(&sos_logger, measurement);
+        log_process_flag = false;
     }
-    //sos_log_check_and_save(&sos_logger);
 }
 
 #if 0
@@ -849,8 +849,8 @@ static inline void handle_finished_evt(rttr_helper_evt_t * p_evt)
         m_rttr_report_entry.mean = 0;
         m_rttr_report_entry.variance = 0;
     }
-
-    sos_logger.save_flag = true;
+    log_process_flag = true;
+    
 }
 
 
@@ -868,6 +868,7 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
             {   
                 measurement_series_started = true; 
                 bsp_board_led_on(SERIES_LED);
+                sos_log_start_measurement_series(&sos_logger);
                 err_code = rttr_helper_enable(&m_rttr,
                                               &m_series_state.sample_buffer[0],
                                               m_series_counts[m_series_state.sample_count_idx]);
@@ -877,6 +878,8 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
             {   
                 measurement_series_started = false; 
                 bsp_board_led_off(SERIES_LED);
+                
+                sos_log_end_measurement_series(&sos_logger);
                 // Disconnect without enabling RTTR to tell the peer that the rttr series is done
                 err_code = sd_ble_gap_disconnect(m_conn_handle,
                                                  BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
@@ -953,7 +956,7 @@ int main(void)
     power_init();
     nrf_drv_clock_lfclk_request(NULL);
     timer_init();
-    //serial_init();
+    serial_init();
     leds_n_btns_init();
     ble_init();
     ranging_init();
@@ -964,7 +967,8 @@ int main(void)
     for (;;)
     {
         rttr_helper_start_check(&m_rttr);
-        sos_log_process();
+        log_process();
+        sos_log_check_and_save(&sos_logger);
         NRF_LOG_PROCESS();
     }
 }
