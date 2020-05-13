@@ -560,25 +560,33 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         {
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
             
-            if (!rttr_helper_ready(&m_rttr))
+            if (p_ble_evt->evt.gap_evt.params.disconnected.reason == BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION)
             {
-                m_adv_ready = true;
-                measurement_series_started = false; 
-                bsp_board_led_off(SERIES_LED);
-                bsp_board_led_on(IDLE_LED);
-                tag_id_leds_set();
-                m_custom_adv_param.measure_num++; 
-                NRF_LOG_INFO("Disconnected, RTTR disabled. (5 x Measurement Series completed)");
+                if (!rttr_helper_ready(&m_rttr))
+                {
+                    m_adv_ready = true;
+                    measurement_series_started = false; 
+                    bsp_board_led_off(SERIES_LED);
+                    bsp_board_led_on(IDLE_LED);
+                    tag_id_leds_set();
+                    m_custom_adv_param.measure_num++; 
+                    NRF_LOG_INFO("Disconnected, RTTR disabled. (5 x Measurement Series completed)");
+                }
+                else
+                {   
+                    if(measurement_series_started == false)
+                    {
+                        measurement_series_started = true; 
+                        bsp_board_led_on(SERIES_LED);
+                    }
+
+                    NRF_LOG_INFO("Disconnected, RTTR enabled.");
+                }
             }
             else
-            {   
-                if(measurement_series_started == false)
-                {
-                    measurement_series_started = true; 
-                    bsp_board_led_on(SERIES_LED);
-                }
-
-                NRF_LOG_INFO("Disconnected, RTTR enabled.");
+            {
+                NRF_LOG_INFO("Connection improperly closed, restarting advertising...");
+                advertising_start(&m_custom_adv_param);
             }
             break;
         }

@@ -72,18 +72,19 @@
 - LED1 : scanning
 - LED2 : measurement series begun
 - LED3: RTTR measurement ongoing
-- LED4: timeout during 
+- LED4: timeout during RTTR/connection
 */
 
-#define SERIES_LED                      BSP_BOARD_LED_0 //LED1
-#define SCANNING_LED                    BSP_BOARD_LED_1 //LED2
-#define RTTR_LED                        BSP_BOARD_LED_2 //LED3
-#define TIMEOUT_LED                     BSP_BOARD_LED_3 //LED4
+#define SERIES_LED                  BSP_BOARD_LED_0 //LED1
+#define SCANNING_LED                BSP_BOARD_LED_1 //LED2
+#define RTTR_LED                    BSP_BOARD_LED_2 //LED3
+#define TIMEOUT_LED                 BSP_BOARD_LED_3 //LED4
 
 #define APP_BLE_PHY                 BLE_GAP_PHY_CODED                   /**< The primary PHY used for scanning/connections. */
 #define APP_BLE_TX_POWER_DEFAULT    3                                   /**< The default TX power in dBm used for advertising/connections. */
 #define APP_BLE_CONN_CFG_TAG        1                                   /**< Tag that refers to the BLE stack configuration set with @ref sd_ble_cfg_set. The default tag is @ref BLE_CONN_CFG_TAG_DEFAULT. */
 #define APP_BLE_OBSERVER_PRIO       3                                   /**< BLE observer priority of the application. There is no need to modify this value. */
+#define RTTR_BLE_OBSERVER_PRIO      2
 
 #define SCAN_INTERVAL               MSEC_TO_UNITS(2000, UNIT_0_625_MS)  /**< Determines scan interval in units of 0.625 millisecond. */
 #define SCAN_WINDOW                 MSEC_TO_UNITS(2000, UNIT_0_625_MS)  /**< Determines scan window in units of 0.625 millisecond. */
@@ -92,23 +93,24 @@
 #define MIN_CONNECTION_INTERVAL     MSEC_TO_UNITS(7.5, UNIT_1_25_MS)    /**< Determines minimum connection interval in milliseconds. */
 #define MAX_CONNECTION_INTERVAL     MSEC_TO_UNITS(30, UNIT_1_25_MS)     /**< Determines maximum connection interval in milliseconds. */
 #define SLAVE_LATENCY               0                                   /**< Determines slave latency in terms of connection events. */
-#define SUPERVISION_TIMEOUT         MSEC_TO_UNITS(500, UNIT_10_MS)     /**< Determines supervision time-out in units of 10 milliseconds. */
+#define SUPERVISION_TIMEOUT         MSEC_TO_UNITS(500, UNIT_10_MS)      /**< Determines supervision time-out in units of 10 milliseconds. */
 
 #define OP_QUEUES_SIZE              3
 #define APP_TIMER_PRESCALER         NRF_SERIAL_APP_TIMER_PRESCALER
 
 #define SERIAL_FIFO_TX_SIZE         64
 #define SERIAL_FIFO_RX_SIZE         64
-
 #define SERIAL_BUFF_TX_SIZE         1
 #define SERIAL_BUFF_RX_SIZE         32
 
 #define RTTR_SAMPLE_COUNT_MAX       1024
 #define RTTR_SAMPLE_COUNTS          {16, 32, 64, 128, 256, 512, RTTR_SAMPLE_COUNT_MAX}
 #define RTTR_SERIES_COUNT           5
+#define RTTR_OPERATION_RETRY_COUNT  5
 
 #define SHEEP_TAG_ID                0xFFAABA //0xFF signals manufacture ID is coming, which is set to 0xBAAA 
 #define TAG_ID_INVALID              0xFF
+
 
 /*****************************************************************************
  * Type definitions
@@ -119,7 +121,6 @@ typedef struct
     uint8_t tag_id;
     uint8_t measure_num;
     int8_t rssi;
-    
 }
 tag_packet_t;
 
@@ -133,8 +134,10 @@ logger_state_t;
 typedef struct
 {
     uint8_t tag_id;
+    uint8_t tag_measure_num;
     bool series_done;
     uint32_t series_count;
+    uint32_t attempts;
     int32_t sample_buffer[RTTR_SAMPLE_COUNT_MAX];
     uint32_t sample_count_idx;
 }
@@ -143,6 +146,7 @@ rttr_series_state_t;
 typedef struct
 {
     uint8_t tag_id;
+    uint8_t tag_measure_num;
     uint16_t series;
     uint16_t measurement;
     uint16_t success_count;
@@ -189,13 +193,8 @@ static ble_gap_conn_params_t m_conn_params = {
 
 /** Scan parameters requested for scanning and connection. */
 static ble_gap_scan_params_t m_scan_params = {
-#if APP_BLE_PHY == BLE_GAP_PHY_CODED
     .extended               = 0x01,
     .report_incomplete_evts = 0x00,
-#else
-    .extended               = 0x00,
-    .report_incomplete_evts = 0x00,
-#endif
     .active                 = 0x00,
     .filter_policy          = BLE_GAP_SCAN_FP_ACCEPT_ALL,
     .scan_phys              = APP_BLE_PHY,
@@ -204,8 +203,6 @@ static ble_gap_scan_params_t m_scan_params = {
     .timeout                = SCAN_DURATION,
     .channel_mask           = {0}
 };
-
-
 
 /**@brief Buffer where advertising reports will be stored by the SoftDevice. */
 static uint8_t m_scan_buffer_data[BLE_GAP_SCAN_BUFFER_EXTENDED_MIN];
@@ -222,16 +219,13 @@ static ble_data_t m_scan_buffer =
  *****************************************************************************/
 
 /** @brief RTTR helper structure. */
-RTTR_INITIATOR_HELPER_DEF(m_rttr, APP_BLE_OBSERVER_PRIO);
+RTTR_INITIATOR_HELPER_DEF(m_rttr, RTTR_BLE_OBSERVER_PRIO);
 /** @brief Structure for keeping track of state across RTTR sessions. */
 static rttr_series_state_t m_series_state;
 static const uint16_t m_series_counts[] = RTTR_SAMPLE_COUNTS;
 static const uint32_t m_series_length = sizeof(m_series_counts) / sizeof(m_series_counts[0]);
 
-static const int8_t tx_power_dBm[] = {-8, -4, 0, 3, 4};
 static int8_t m_tx_power = APP_BLE_TX_POWER_DEFAULT;
-
-//APP_TIMER_DEF(m_save_measurement_timer); //Timer for logging after a measurement 
 
 static tag_packet_t m_packet_info; //init
 static rttr_report_entry_t m_rttr_report_entry;
@@ -248,15 +242,22 @@ static int nmea_len = 0;
  *****************************************************************************/
 
 NRF_SERIAL_DRV_UART_CONFIG_DEF(m_uarte1_drv_config,
-                      ARDUINO_1_PIN, ARDUINO_0_PIN,
-                      ARDUINO_2_PIN, ARDUINO_3_PIN,
-                      NRF_UART_HWFC_DISABLED, NRF_UART_PARITY_EXCLUDED,
-                      NRF_UART_BAUDRATE_9600,
-                      UART_DEFAULT_CONFIG_IRQ_PRIORITY);
+                               ARDUINO_1_PIN,
+                               ARDUINO_0_PIN,
+                               ARDUINO_2_PIN,
+                               ARDUINO_3_PIN,
+                               NRF_UART_HWFC_DISABLED,
+                               NRF_UART_PARITY_EXCLUDED,
+                               NRF_UART_BAUDRATE_9600,
+                               UART_DEFAULT_CONFIG_IRQ_PRIORITY);
 NRF_SERIAL_QUEUES_DEF(serial1_queues, SERIAL_FIFO_TX_SIZE, SERIAL_FIFO_RX_SIZE);
 NRF_SERIAL_BUFFERS_DEF(serial1_buffs, SERIAL_BUFF_TX_SIZE, SERIAL_BUFF_RX_SIZE);
-NRF_SERIAL_CONFIG_DEF(serial1_config, NRF_SERIAL_MODE_DMA,
-                      &serial1_queues, &serial1_buffs, serial_event_handler, NULL);
+NRF_SERIAL_CONFIG_DEF(serial1_config,
+                      NRF_SERIAL_MODE_DMA,
+                      &serial1_queues,
+                      &serial1_buffs,
+                      serial_event_handler,
+                      NULL);
 NRF_SERIAL_UART_DEF(serial1_uarte, 1);
 
 
@@ -320,28 +321,13 @@ static void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_seria
 }
 
 
-/**@brief Function for handling asserts in the SoftDevice.
- *
- * @details This function is called in case of an assert in the SoftDevice.
- *
- * @warning This handler is only an example and is not meant for the final product. You need to analyze
- *          how your product is supposed to react in case of assert.
- * @warning On assert from the SoftDevice, the system can only recover on reset.
- *
- * @param[in] line_num     Line number of the failing assert call.
- * @param[in] p_file_name  File name of the failing assert call.
- */
-void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
-{
-    app_error_handler(0xDEADBEEF, line_num, p_file_name);
-}
-
 static void rttr_series_state_init(void)
 {
     m_series_state.tag_id = TAG_ID_INVALID;
     m_series_state.series_done = false;
     m_series_state.series_count = 0;
     m_series_state.sample_count_idx = 0;
+    m_series_state.attempts = 0;
 }
 
 
@@ -353,6 +339,7 @@ static bool rttr_series_state_transition(void)
         m_series_state.series_count++;
         m_series_state.series_done = m_series_state.series_count >= RTTR_SERIES_COUNT;
     }
+    m_series_state.attempts = 0;
     return m_series_state.series_done;
 }
 
@@ -376,6 +363,15 @@ static void rttr_series_timeout_handle(void)
         sos_log_end_measurement_series(&sos_logger);
         bsp_board_led_on(TIMEOUT_LED);
         bsp_board_led_off(SERIES_LED);
+    }
+}
+
+static void rttr_series_failure_handle(void)
+{
+    m_series_state.attempts++;
+    if (m_series_state.attempts >= RTTR_OPERATION_RETRY_COUNT)
+    {
+        rttr_series_timeout_handle();
     }
 }
 
@@ -459,6 +455,7 @@ static void ble_adv_report_handle(ble_gap_evt_t const * p_gap_evt)
                 APP_ERROR_CHECK(err_code);
 
                 m_series_state.tag_id = m_packet_info.tag_id;
+                m_series_state.tag_measure_num = m_packet_info.measure_num;
                 continue_scan = false;
                 bsp_board_led_off(TIMEOUT_LED);
             }
@@ -574,10 +571,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         case BLE_GAP_EVT_TIMEOUT:
         {
-            // We have not specified a timeout for scanning, so only connection attemps can timeout.
             if (p_gap_evt->params.timeout.src == BLE_GAP_TIMEOUT_SRC_CONN)
             {
-                rttr_series_timeout_handle();
+                rttr_series_failure_handle();
                 scan_start(false);
                 NRF_LOG_DEBUG("Connection request timed out.");
             }
@@ -613,7 +609,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             err_code = sd_ble_gap_disconnect(m_conn_handle,
                                              BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
             APP_ERROR_CHECK(err_code);
-            rttr_series_timeout_handle();
+            rttr_series_failure_handle();
             break;
         }
 
@@ -625,7 +621,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
                                              BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
             APP_ERROR_CHECK(err_code);
-            rttr_series_timeout_handle();
+            rttr_series_failure_handle();
             break;
         }
 
@@ -755,8 +751,11 @@ static void log_process(void)
         uint32_t ticks = (uint32_t) MAX(m_rttr_report_entry.mean, 0);
         uint32_t distance = rttr_distance_calculate(ticks);
 
-        NRF_LOG_INFO("RTTR: Tag: 0x%X - Series %d/%d (%d/%d):",
+        NRF_LOG_INFO("RTTR: Tag ID: 0x%X, Num: %d",
             m_rttr_report_entry.tag_id,
+            m_rttr_report_entry.tag_measure_num);
+
+        NRF_LOG_INFO("Series %d/%d (%d/%d):",
             m_rttr_report_entry.series + 1,
             RTTR_SERIES_COUNT,
             m_rttr_report_entry.measurement + 1,
@@ -831,7 +830,10 @@ static inline void handle_finished_evt(rttr_helper_evt_t * p_evt)
     rttr_stats_report_t stats;
     rttr_evt_finished_params_t * p_finished = &p_evt->params.finished;
 
+    // TODO: Log measure_num from adv packet
+
     m_rttr_report_entry.tag_id = m_series_state.tag_id;
+    m_rttr_report_entry.tag_measure_num = m_series_state.tag_measure_num;
     m_rttr_report_entry.series = m_series_state.series_count;
     m_rttr_report_entry.measurement = m_series_state.sample_count_idx;
     m_rttr_report_entry.success_count = p_finished->count;
@@ -875,7 +877,7 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
                 APP_ERROR_CHECK(err_code);
             }
             else
-            {   
+            {
                 measurement_series_started = false; 
                 bsp_board_led_off(SERIES_LED);
                 
@@ -948,6 +950,23 @@ static void ranging_init(void)
 /*
  * Main loop
  *****************************************************************************/
+
+/**@brief Function for handling asserts in the SoftDevice.
+ *
+ * @details This function is called in case of an assert in the SoftDevice.
+ *
+ * @warning This handler is only an example and is not meant for the final product. You need to analyze
+ *          how your product is supposed to react in case of assert.
+ * @warning On assert from the SoftDevice, the system can only recover on reset.
+ *
+ * @param[in] line_num     Line number of the failing assert call.
+ * @param[in] p_file_name  File name of the failing assert call.
+ */
+void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
+{
+    app_error_handler(0xDEADBEEF, line_num, p_file_name);
+}
+
 
 int main(void)
 {
