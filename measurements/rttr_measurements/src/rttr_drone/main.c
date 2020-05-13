@@ -371,6 +371,7 @@ static void rttr_series_failure_handle(void)
     m_series_state.attempts++;
     if (m_series_state.attempts >= RTTR_OPERATION_RETRY_COUNT)
     {
+        NRF_LOG_INFO("RTTR retry count reached, resetting state...");
         rttr_series_timeout_handle();
     }
 }
@@ -918,7 +919,17 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
         {
             bsp_board_led_off(RTTR_LED);
             handle_finished_evt(p_evt);
-            rttr_series_state_transition();
+
+            if (p_evt->params.finished.count > 0)
+            {
+                rttr_series_state_transition();
+            }
+            else
+            {
+                // No packets received is a sign that something is wrong - retry
+                NRF_LOG_INFO("No RTTR packets received, retry...")
+                rttr_series_failure_handle();
+            }
             scan_start(false);
             break;
         }
