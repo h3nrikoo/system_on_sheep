@@ -587,7 +587,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         {
             timeout_handle();
             NRF_LOG_INFO("Advertising timed out.");
-            //TODO: logic for when a timeout occor during a measurement series?
             if(measurement_series_started) 
             {
                 bsp_board_led_off(SERIES_LED);
@@ -751,8 +750,9 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
             }
             else
             {
-                // No packets received is a sign that something is wrong - reset state.
-                timeout_handle();
+                // No packets received is a sign that something is wrong - retry adv.
+                NRF_LOG_INFO("No RTTR packets received, retry advertising...")
+                advertising_start(&m_custom_adv_param);
             }
             break;
         }
