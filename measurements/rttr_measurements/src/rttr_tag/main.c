@@ -753,7 +753,8 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
             bsp_board_led_off(RTTR_LED);
             NRF_LOG_INFO("RTT Ranging finished!");
             if (p_evt->params.finished.count > 0)
-            {
+            {   
+                NRF_LOG_INFO("Packets recevied: %i",p_evt->params.finished.count)
                 advertising_start(&m_custom_adv_param);
             }
             else

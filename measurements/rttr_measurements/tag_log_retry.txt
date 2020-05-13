@@ -1,0 +1,201 @@
+<info> app_timer: RTC: initialized.
+<info> app: RTTR Tag started. Press Button 3 to start advertising.
+<info> app: TAG ID: 0xA
+<info> app: RUNNING...
+<info> app: Advertising timed out.
+<info> app: RUNNING...
+<info> app: Advertising timed out.
+<info> app: RUNNING...
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 6
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 30
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 44
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 125
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 253
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 512
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 1024
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 16
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 32
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 64
+<info> app: Connected
+<info> app: Connection improperly closed, restarting advertising...
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 128
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 256
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 512
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 1021
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 16
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 29
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 44
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 110
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: No RTTR packets received, retry advertising...
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 238
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 506
+<info> app: Connected
+<info> app: Connection improperly closed, restarting advertising...
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 1024
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: No RTTR packets received, retry advertising...
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 16
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 32
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 61
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 128
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 256
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 512
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 952
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 13
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 32
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 61
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 125
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 253
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 509
+<info> app: Connected
+<info> app: RTT Ranging enabled!
+<info> app: Disconnected, RTTR enabled.
+<info> app: RTT Ranging finished!
+<info> app: Packets recevied: 1024
+<info> app: Connected
+<info> app: Connection improperly closed, restarting advertising...
+<info> app: Connected
+<info> app: Disconnected, RTTR disabled. (5 x Measurement Series completed)

@@ -830,8 +830,6 @@ static inline void handle_finished_evt(rttr_helper_evt_t * p_evt)
     rttr_stats_report_t stats;
     rttr_evt_finished_params_t * p_finished = &p_evt->params.finished;
 
-    // TODO: Log measure_num from adv packet
-
     m_rttr_report_entry.tag_id = m_series_state.tag_id;
     m_rttr_report_entry.tag_measure_num = m_series_state.tag_measure_num;
     m_rttr_report_entry.series = m_series_state.series_count;
