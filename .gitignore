@@ -2,8 +2,10 @@
 #jlink 
 #output 
 
+
 **.jlink 
 **.emSession 
 Output/ 
 **.idea/
 **venv/
+**.lnk 
