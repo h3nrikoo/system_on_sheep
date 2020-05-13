@@ -211,46 +211,67 @@ def two_ray_ground_reflection(tx_power, dmax):
     def mW2dBm(mW):
         return 10*math.log(mW,10)
 
-    graph = [mW2dBm(Pr(d)) - 3 for d in range (0, dmax)]
+    clover_leaf_loss_dBm = -3
+
+    graph = [[d,(mW2dBm(Pr(d)) + clover_leaf_loss_dBm)] for d in range (0, dmax)]
     
     return graph
     
 
 def plot_pdr_two_ray_gnd(tx_power, angle):
-    df2 = df[(df.tx_power == tx_power) & (df.angle == angle)]
-    df2 = df2.groupby('th_gps_dist').size().reset_index().rename(columns={0: 'pdr'})
+    df2 = df[(df.angle == angle)]
+    # df2 = df[(df.tx_power == tx_power) & (df.angle == angle)]
+    df2 = df2.groupby(['tx_power','th_gps_dist']).size().reset_index().rename(columns={0: 'pdr'})
     df2['pdr'] = df2['pdr'] / (100)
     
-
-    
-    t1 = np.arange(0,df2['th_gps_dist'].max(),1)
-    
-   
     data1 = two_ray_ground_reflection(tx_power, df2['th_gps_dist'].max())
 
-    fig, ax1 = plt.subplots()
+    df3 = pd.DataFrame(data1, columns = ['Dist', 'RSSI'])
 
+    fig, ax1 = plt.subplots()
     color = 'tab:red'
+    ax1 = sns.lineplot(palette='Paired', data=df3, x = 'Dist', y = 'RSSI')
     ax1.set_xlabel('distance[d]')
     ax1.set_ylabel('RSSI', color=color)
-    ax1.plot(t1, data1, color=color)
     ax1.tick_params(axis='y', labelcolor=color)
 
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
 
-    sns.lineplot(ax = ax2, palette='Paired', data=df2, x='th_gps_dist', y='pdr')
+    sns.lineplot(ax = ax2, palette='Paired', data=df2, x='th_gps_dist', y='pdr', hue = 'tx_power') #pointplot ? 
 
     color = 'tab:blue'
     ax2.set_ylabel('PDR', color=color)  # we already handled the x-label with ax1
     ax2.tick_params(axis='y', labelcolor=color)
 
-    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    # fig.tight_layout()  # otherwise the right y-label is slightly clipped
     plt.show()
 
+# plot_pdr_two_ray_gnd(0, 'H_BC')
+# plot_pdr_two_ray_gnd(0, 'H_WC')
+# plot_pdr_two_ray_gnd(0, 'V_BC')
+# plot_pdr_two_ray_gnd(0, 'V_WC')
 
 
-# plot_pdr_two_ray_gnd(3, 'V_BC')
 
+def plot_rssi_two_ray_gnd(tx_power, angle):
+    df2 = df[(df.tx_power == tx_power) & (df.angle == angle)]
+    df3 = df2.groupby(['th_gps_dist'])['rssi'].max().reset_index()
+    df4 = df2.groupby(['th_gps_dist'])['rssi'].min().reset_index()
+
+    # t1 = np.arange(0, df2['th_gps_dist'].max(),1)
+    data1 = two_ray_ground_reflection(tx_power, df2['th_gps_dist'].max())
+
+    df5 = pd.DataFrame(data1, columns = ['Dist', 'rssi'])
+    df5['threshold'] = -103
+    ax = sns.lineplot(palette='Paired', data=df5, x='Dist', y='threshold', label = 'Sensitivity')
+    ax.lines[0].set_linestyle("--")
+    sns.lineplot(palette='Paired', data=df5, x='Dist', y = 'rssi', label = 'TRGRM')
+    sns.lineplot(palette='Paired', data=df3, x='th_gps_dist', y='rssi', label = 'RSSI max')
+    sns.lineplot(palette='Paired', data=df4, x='th_gps_dist', y='rssi', label = 'RSSI min')
+
+    plt.show()
+
+# plot_rssi_two_ray_gnd(3, 'V_WC')
 
 
 #dataset 1 and 2 
@@ -276,3 +297,66 @@ def plot_rssi_scatter(tx_power, angle):
     ax = sns.scatterplot(data=df2, x='distance', y='rssi', hue='count', size='count')
     plt.show()
 #plot_rssi_scatter(-8, 0)
+
+
+
+def testfunc(angle): 
+
+    df2 = df[(df.angle == angle)]
+    df2 = df2.groupby(['th_gps_dist', 'tx_power']).size().reset_index().rename(columns={0: 'pdr'})
+    df2['pdr'] = df2['pdr'] / (100)
+    max_dist = df2['th_gps_dist'].max()
+
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+
+    data1 = two_ray_ground_reflection(0, max_dist)
+
+    df3 = pd.DataFrame(data1, columns = ['Dist', 'RSSI'])
+
+    sns.lineplot(palette='Paired', data=df3, x = 'Dist', y = 'RSSI', ax=ax1)
+
+    
+
+    xlabels = np.arange(0,max_dist+50,50) 
+    str_xlabels = xlabels.astype(str)
+
+    g = sns.barplot(ax = ax2, data=df2, x='th_gps_dist', y='pdr', order=range(0,max_dist+50), hue = 'tx_power') 
+    g.set(xticks=xlabels)
+    ax2.set_xticklabels(str_xlabels)
+    
+
+    # g = sns.barplot(x=[0,250,500,750,1000], y=[100,200,135,98,100], ax=ax2, order=range(0,1100), dodge=False)
+
+
+
+    def change_width(ax, new_width, num_cols, xmax):
+        i = 0; 
+        col = 0; 
+        for patch in ax.patches:
+            i += 1
+            current_width = patch.get_width()
+            diff = new_width - current_width
+
+            # we change the bar width
+            patch.set_width(new_width)
+
+            if i == xmax : 
+                i = 0
+                col += 1
+            
+            relative_pos_increase = col*new_width
+            centering = -diff*0.5 - (num_cols*0.5)*new_width
+        
+            patch.set_x(patch.get_x() + centering + relative_pos_increase)
+            
+        
+    
+    # change_width(ax2,5,df2['tx_power'].nunique(), df2['th_gps_dist'].nunique())
+    change_width(ax2, 5, 5,850)
+
+    
+    plt.show()
+    # sns.set()
+
+testfunc('V_WC')
