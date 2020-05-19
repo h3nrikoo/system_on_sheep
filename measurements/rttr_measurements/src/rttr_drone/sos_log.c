@@ -175,7 +175,6 @@ void sos_log_start_measurement_series(sos_log_logger_t* logger) {
 }
 
 void sos_log_end_measurement_series(sos_log_logger_t* logger) {
-    logger->current_measurement_series++;
     logger->save_flag = true;
 }
 

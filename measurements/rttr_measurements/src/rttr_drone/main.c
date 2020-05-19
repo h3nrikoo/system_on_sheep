@@ -301,15 +301,8 @@ static void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_seria
         case NRF_SERIAL_EVENT_DRV_ERR:
         {
             NRF_LOG_ERROR("NRF_SERIAL_EVENT_DRV_ERR\n");
-            if (sos_logger.n_rttr_measurements > 0)
-            {
-                sos_logger.save_flag = true;
-            }
-            else if (!sos_logger.save_flag)
-            {
-                nrf_serial_uninit(p_serial);
-                serial_init();
-            }
+            nrf_serial_uninit(p_serial);
+            serial_init();
             break;
         }
         default:
@@ -428,6 +421,7 @@ static inline void tag_adv_packet_parse(ble_gap_evt_adv_report_t const * p_adv_r
 {
     p_info->tag_id = p_adv_report->data.p_data[7];
     p_info->measure_num = p_adv_report->data.p_data[8];
+    sos_logger.current_measurement_series = p_adv_report->data.p_data[8];
     p_info->rssi = p_adv_report->rssi;
 }
 
