@@ -89,10 +89,10 @@
 #define SCAN_WINDOW                 MSEC_TO_UNITS(2000, UNIT_0_625_MS)  /**< Determines scan window in units of 0.625 millisecond. */
 #define SCAN_DURATION               MSEC_TO_UNITS(10000, UNIT_10_MS)    /**< Duration of the scanning in units of 10 milliseconds. If set to 0x0000, scanning will continue until it is explicitly disabled. */
 
-#define MIN_CONNECTION_INTERVAL     MSEC_TO_UNITS(7.5, UNIT_1_25_MS)    /**< Determines minimum connection interval in milliseconds. */
-#define MAX_CONNECTION_INTERVAL     MSEC_TO_UNITS(30, UNIT_1_25_MS)     /**< Determines maximum connection interval in milliseconds. */
-#define SLAVE_LATENCY               0                                   /**< Determines slave latency in terms of connection events. */
-#define SUPERVISION_TIMEOUT         MSEC_TO_UNITS(500, UNIT_10_MS)     /**< Determines supervision time-out in units of 10 milliseconds. */
+#define MIN_CONNECTION_INTERVAL     MSEC_TO_UNITS(100, UNIT_1_25_MS)    /**< Determines minimum connection interval in milliseconds. */
+#define MAX_CONNECTION_INTERVAL     MSEC_TO_UNITS(200, UNIT_1_25_MS)     /**< Determines maximum connection interval in milliseconds. */
+#define SLAVE_LATENCY               2                                   /**< Determines slave latency in terms of connection events. */
+#define SUPERVISION_TIMEOUT         MSEC_TO_UNITS(4000, UNIT_10_MS)     /**< Determines supervision time-out in units of 10 milliseconds. */
 
 #define OP_QUEUES_SIZE              3
 #define APP_TIMER_PRESCALER         NRF_SERIAL_APP_TIMER_PRESCALER
