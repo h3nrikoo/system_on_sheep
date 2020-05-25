@@ -75,12 +75,17 @@
  * Macros
  *****************************************************************************/
 
+#define MAX_RTT_SAMPLE_COUNT            128                                 /**< RTT Ranging measurement count. */
+
+#define APP_COMPANY_IDENTIFIER          0xFFAABA                            /**< Identifier for sheep tags */
+
 #define APP_BLE_PHY                     BLE_GAP_PHY_CODED                   /**< The primary PHY used for scanning/connections. */
 #define APP_BLE_TX_POWER                3                                   /**< The TX power in dBm used for advertising/connections. */
 
-#define SCAN_INTERVAL                   0x00A0                              /**< Determines scan interval in units of 0.625 millisecond. */
-#define SCAN_WINDOW                     0x0050                              /**< Determines scan window in units of 0.625 millisecond. */
+#define SCAN_INTERVAL                   MSEC_TO_UNITS(2000, UNIT_0_625_MS)  /**< Determines scan interval in units of 0.625 millisecond. */
+#define SCAN_WINDOW                     MSEC_TO_UNITS(2000, UNIT_0_625_MS)  /**< Determines scan window in units of 0.625 millisecond. */
 #define SCAN_DURATION                   0x0000                              /**< Timeout when scanning. 0x0000 disables timeout. */
+#define TRY_CONN_TIMEOUT                MSEC_TO_UNITS(5200, UNIT_10_MS)    /**< Timeout when scanning. 0x0000 disables timeout. */
 
 #define MIN_CONNECTION_INTERVAL         MSEC_TO_UNITS(7.5, UNIT_1_25_MS)    /**< Determines minimum connection interval in milliseconds. */
 #define MAX_CONNECTION_INTERVAL         MSEC_TO_UNITS(30, UNIT_1_25_MS)     /**< Determines maximum connection interval in milliseconds. */
@@ -95,8 +100,6 @@
 #define RTTR_READY_LED                  BSP_BOARD_LED_2
 #define RTTR_ONGOING_LED                BSP_BOARD_LED_3
 
-#define MAX_RTT_SAMPLE_COUNT            128                                 /**< RTT Ranging measurement count. */
-
 
 /*****************************************************************************
  * Static variables
@@ -109,7 +112,7 @@ NRF_BLE_GQ_DEF(m_ble_gatt_queue,                                /**< BLE GATT Qu
                NRF_SDH_BLE_CENTRAL_LINK_COUNT,
                NRF_BLE_GQ_QUEUE_SIZE);
 
-static char const m_target_periph_name[] = "Sheep_RTTRS";       /**< Name of the device we try to connect to. This name is searched in the scan report data*/
+//static char const m_target_periph_name[] = "Sheep_RTTRS";       /**< Name of the device we try to connect to. This name is searched in the scan report data*/
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;        /**< Connection handle of the current connection. */
 
 static ble_gap_scan_params_t m_scan_params = {
@@ -134,6 +137,16 @@ static ble_gap_conn_params_t m_conn_params = {
 RTTR_INITIATOR_HELPER_DEF(m_rttr, APP_BLE_OBSERVER_PRIO);
 static int32_t m_rttr_samples[MAX_RTT_SAMPLE_COUNT];
 static uint16_t m_rttr_packet_count = MAX_RTT_SAMPLE_COUNT;
+
+/**@brief Buffer where advertising reports will be stored by the SoftDevice. */
+static uint8_t m_scan_buffer_data[BLE_GAP_SCAN_BUFFER_EXTENDED_MIN];
+
+/**@brief Pointer to the buffer where advertising reports will be stored by the SoftDevice. */
+static ble_data_t m_scan_buffer =
+{
+    m_scan_buffer_data,
+    BLE_GAP_SCAN_BUFFER_EXTENDED_MIN
+};
 
 
 /*****************************************************************************
@@ -188,49 +201,31 @@ static void scan_evt_handler(scan_evt_t const * p_scan_evt)
 }
 
 
-static void scan_init(void)
-{
-    ret_code_t          err_code;
-    nrf_ble_scan_init_t init_scan;
-    ble_uuid_t          scan_uuids[RTTR_HELPER_SCAN_UUID_COUNT];
-    
-    err_code = rttr_helper_scan_uuids_get(&m_rttr, &scan_uuids[0]);
-    APP_ERROR_CHECK(err_code);
-
-    memset(&init_scan, 0, sizeof(init_scan));
-
-    init_scan.p_scan_param      = &m_scan_params;
-    init_scan.connect_if_match  = true;
-    init_scan.conn_cfg_tag      = APP_BLE_CONN_CFG_TAG;
-    init_scan.p_conn_param      = &m_conn_params;
-
-    err_code = nrf_ble_scan_init(&m_scan, &init_scan, scan_evt_handler);
-    APP_ERROR_CHECK(err_code);
-
-    // Setting filters for scanning.
-    err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_UUID_FILTER, false);
-    APP_ERROR_CHECK(err_code);
-
-    err_code = nrf_ble_scan_filter_set(&m_scan, SCAN_UUID_FILTER, &scan_uuids[0]);
-    APP_ERROR_CHECK(err_code);
-}
-
-
 /**@brief Function to start scanning.
  */
-static void scan_start(void)
-{
+static void scan_start(bool cont)
+{   
     ret_code_t err_code;
-
+  
     err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_SCAN_INIT,
                                        BLE_CONN_HANDLE_INVALID,
                                        APP_BLE_TX_POWER);
     APP_ERROR_CHECK(err_code);
 
-    err_code = nrf_ble_scan_start(&m_scan);
+    m_scan_params.timeout = SCAN_DURATION;
+    
+    if (!cont)
+    {
+        err_code = sd_ble_gap_scan_start(&m_scan_params, &m_scan_buffer);
+    }
+    else
+    {
+        err_code = sd_ble_gap_scan_start(NULL, &m_scan_buffer);
+    }
     APP_ERROR_CHECK(err_code);
 
     bsp_indication_set(BSP_INDICATE_SCANNING);
+    NRF_LOG_INFO("SCANNING..."); 
 }
 
 
@@ -238,10 +233,46 @@ static void scan_start_if_no_ranging(void)
 {
     if (!rttr_helper_ready(&m_rttr))
     {
-        scan_start();
+        scan_start(false);  
     }
 }
 
+static inline uint32_t manufacturer_id_get(ble_gap_evt_adv_report_t const * p_adv_report)
+{
+    return p_adv_report->data.p_data[4] << 16 |
+           p_adv_report->data.p_data[5] << 8 |
+           p_adv_report->data.p_data[6];
+}
+
+
+static void ble_adv_report_handle(ble_gap_evt_t const * p_gap_evt)
+{
+    ret_code_t err_code;
+    ble_gap_evt_adv_report_t const * p_adv_report = &p_gap_evt->params.adv_report;
+    bool continue_scan = true;
+
+    uint32_t manufacturer_id;
+    manufacturer_id = manufacturer_id_get(p_adv_report);
+    if (manufacturer_id == APP_COMPANY_IDENTIFIER)
+    {
+        uint8_t device_id = p_adv_report->data.p_data[7];
+        NRF_LOG_INFO("ID: %i", device_id); 
+
+        continue_scan = false; 
+        m_scan_params.timeout = TRY_CONN_TIMEOUT; 
+        err_code =  sd_ble_gap_connect(&p_adv_report->peer_addr,
+                                           &m_scan_params,
+                                           &m_conn_params,
+                                           APP_BLE_CONN_CFG_TAG);
+        APP_ERROR_CHECK(err_code);
+    }
+    if(continue_scan)
+    {
+        scan_start(true); 
+    }
+
+
+}
 
 /*
  * BLE Database Discovery
@@ -339,7 +370,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             // We have not specified a timeout for scanning, so only connection attemps can timeout.
             if (p_gap_evt->params.timeout.src == BLE_GAP_TIMEOUT_SRC_CONN)
             {
-                NRF_LOG_DEBUG("Connection request timed out.");
+                NRF_LOG_INFO("Connection request timed out.");
+                scan_start_if_no_ranging(); 
             }
             break;
         }
@@ -355,7 +387,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
         {
-            NRF_LOG_DEBUG("PHY update request.");
+            NRF_LOG_INFO("PHY update request.");
             ble_gap_phys_t const phys =
             {
                 .rx_phys = BLE_GAP_PHY_AUTO,
@@ -369,7 +401,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         case BLE_GATTC_EVT_TIMEOUT:
         {
             // Disconnect on GATT Client timeout event.
-            NRF_LOG_DEBUG("GATT Client Timeout.");
+            NRF_LOG_INFO("GATT Client Timeout.");
             err_code = sd_ble_gap_disconnect(m_conn_handle,
                                              BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
             APP_ERROR_CHECK(err_code);
@@ -379,10 +411,23 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         case BLE_GATTS_EVT_TIMEOUT:
         {
             // Disconnect on GATT Server timeout event.
-            NRF_LOG_DEBUG("GATT Server Timeout.");
+            NRF_LOG_INFO("GATT Server Timeout.");
+            if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+            {
+                NRF_LOG_INFO("Manual disconnect.");
+                err_code = sd_ble_gap_disconnect(m_conn_handle,
+                                                 BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+                APP_ERROR_CHECK(err_code);
+            }
             err_code = sd_ble_gap_disconnect(p_ble_evt->evt.gatts_evt.conn_handle,
                                              BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
             APP_ERROR_CHECK(err_code);
+            break;
+        }
+
+        case BLE_GAP_EVT_ADV_REPORT:
+        {
+            ble_adv_report_handle(p_gap_evt);
             break;
         }
 
@@ -614,21 +659,27 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
         case RTTR_HELPER_EVT_CONNECTED:
         {
             ret_code_t err_code;
-            err_code = bsp_buttons_enable();
+            //err_code = bsp_buttons_enable();
+            err_code = rttr_helper_enable(&m_rttr,
+                                              &m_rttr_samples[0],
+                                              m_rttr_packet_count);
             APP_ERROR_CHECK(err_code);
             break;
         }
         case RTTR_HELPER_EVT_DISCONNECTED:
         {
             ret_code_t err_code;
-            err_code = bsp_buttons_disable();
+            //err_code = bsp_buttons_disable();
             APP_ERROR_CHECK(err_code);
             break;
         }
         case RTTR_HELPER_EVT_ENABLED:
-        {
+        {   
+            ret_code_t err_code;
             bsp_board_led_on(RTTR_READY_LED);
             NRF_LOG_INFO("RTT Ranging enabled!");
+            err_code = sd_ble_gap_disconnect(m_conn_handle,
+                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
             break;
         }
         case RTTR_HELPER_EVT_DISABLED:
@@ -704,14 +755,14 @@ int main(void)
     buttons_leds_init();
     power_management_init();
     ble_init();
-    scan_init();
+    //scan_init();
     ranging_init();
 
     // Start execution.
     NRF_LOG_INFO("RTT Ranging Client started.");
 
     // Start scanning for peer
-    scan_start();
+    scan_start(false);
 
     // Enter main loop.
     for (;;)

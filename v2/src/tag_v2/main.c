@@ -76,31 +76,32 @@
 /*****************************************************************************
  * Macros
  *****************************************************************************/
+#define ADVERTISING_INTERVAL_MS         5000
+#define APP_COMPANY_IDENTIFIER          0xBAAA                                              /**< Identifier for sheep tags */
+#define DEVICE_ID                       123                                                 /**< ID of specific tag that is advertised in an adv packet */
+                                                                                            
+#define APP_BLE_PHY                     BLE_GAP_PHY_CODED                                   /**< The primary PHY used for advertising/connections. */
+#define APP_BLE_TX_POWER                3                                                   /**< The TX power in dBm used for advertising/connections. */
 
-#define DEVICE_NAME                     "Sheep_RTTRS"                           /**< Name of device. Will be included in the advertising data. */
+#define APP_ADV_INTERVAL                MSEC_TO_UNITS(ADVERTISING_INTERVAL_MS, UNIT_0_625_MS)  /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
+#define APP_ADV_DURATION                BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED               /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
 
-#define APP_BLE_PHY                     BLE_GAP_PHY_CODED                       /**< The primary PHY used for advertising/connections. */
-#define APP_BLE_TX_POWER                3                                       /**< The TX power in dBm used for advertising/connections. */
-
-#define APP_ADV_INTERVAL                64                                      /**< The advertising interval (in units of 0.625 ms; this value corresponds to 40 ms). */
-#define APP_ADV_DURATION                BLE_GAP_ADV_TIMEOUT_GENERAL_UNLIMITED   /**< The advertising time-out (in units of seconds). When set to 0, we will never time out. */
-
-#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (0.5 seconds). */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(200, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (1 second). */
-#define SLAVE_LATENCY                   0                                       /**< Slave latency. */
-#define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory time-out (4 seconds). */
-
-#define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(20000)                  /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (15 seconds). */
-#define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000)                   /**< Time between each call to sd_ble_gap_conn_param_update after the first call (5 seconds). */
-#define MAX_CONN_PARAMS_UPDATE_COUNT    3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
-
-#define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
-#define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
-
-#define RTTR_READY_LED                  BSP_BOARD_LED_2                         /**< Is on when ranging is enabled but not yet started. */
-#define RTTR_ONGOING_LED                BSP_BOARD_LED_3                         /**< Is on while ranging is ongoing. */
-
-#define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
+#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)                    /**< Minimum acceptable connection interval (0.5 seconds). */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(200, UNIT_1_25_MS)                    /**< Maximum acceptable connection interval (1 second). */
+#define SLAVE_LATENCY                   0                                                   /**< Slave latency. */
+#define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)                     /**< Connection supervisory time-out (4 seconds). */
+                                                                                            
+#define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(20000)                              /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (15 seconds). */
+#define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000)                               /**< Time between each call to sd_ble_gap_conn_param_update after the first call (5 seconds). */
+#define MAX_CONN_PARAMS_UPDATE_COUNT    3                                                   /**< Number of attempts before giving up the connection parameter negotiation. */
+                                                                                            
+#define APP_BLE_OBSERVER_PRIO           3                                                   /**< Application's BLE observer priority. You shouldn't need to modify this value. */
+#define APP_BLE_CONN_CFG_TAG            1                                                   /**< A tag identifying the SoftDevice BLE configuration. */
+                                                                                            
+#define RTTR_READY_LED                  BSP_BOARD_LED_2                                     /**< Is on when ranging is enabled but not yet started. */
+#define RTTR_ONGOING_LED                BSP_BOARD_LED_3                                     /**< Is on while ranging is ongoing. */
+                                                                                            
+#define DEAD_BEEF                       0xDEADBEEF                                          /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
 
 /*****************************************************************************
@@ -155,11 +156,6 @@ static void gap_params_init(void)
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
 
-    err_code = sd_ble_gap_device_name_set(&sec_mode,
-                                          (const uint8_t *)DEVICE_NAME,
-                                          strlen(DEVICE_NAME));
-    APP_ERROR_CHECK(err_code);
-
     memset(&gap_conn_params, 0, sizeof(gap_conn_params));
 
     gap_conn_params.min_conn_interval = MIN_CONN_INTERVAL;
@@ -204,22 +200,24 @@ static void services_init(void)
 static void advertising_init(void)
 {
     ret_code_t    err_code;
-    ble_advdata_t advdata;
-    ble_advdata_t srdata;
+    static ble_advdata_t advdata;
+    static ble_advdata_manuf_data_t manuf_specific_data;
+    static uint8_t device_id[] = {DEVICE_ID}; 
 
-    ble_uuid_t adv_uuids[RTTR_HELPER_ADV_UUID_COUNT];
-    
-    err_code = rttr_helper_adv_uuids_get(&m_rttr, &adv_uuids[0]);
-    APP_ERROR_CHECK(err_code);
-    
+
+    manuf_specific_data.company_identifier  = APP_COMPANY_IDENTIFIER;
+    manuf_specific_data.data.p_data = (uint8_t *) device_id;
+    manuf_specific_data.data.size   = sizeof(device_id);
+
+
     // Build and set advertising data.
     memset(&advdata, 0, sizeof(advdata));
 
-    advdata.name_type               = BLE_ADVDATA_FULL_NAME;
-    advdata.include_appearance      = true;
+    advdata.name_type               = BLE_ADVDATA_NO_NAME;  
     advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-    advdata.uuids_complete.uuid_cnt = RTTR_HELPER_ADV_UUID_COUNT;
-    advdata.uuids_complete.p_uuids  = adv_uuids;
+    advdata.p_manuf_specific_data   = &manuf_specific_data;
+
+
 
     err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
     APP_ERROR_CHECK(err_code);
@@ -263,7 +261,10 @@ static void advertising_start(void)
 static void advertising_start_if_no_ranging(void)
 {
     if (!rttr_helper_ready(&m_rttr))
-    {
+    {   
+        for(int i = 0; i <= 0xFFFF; i++) {
+            //nop
+        }
         advertising_start();
     }
 }
