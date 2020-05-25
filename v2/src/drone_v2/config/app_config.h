@@ -19,4 +19,15 @@
 // Logging does not work in SES without this define
 #define NRF_FPRINTF_FLAG_AUTOMATIC_CR_ON_LF_ENABLED 0
 
+#define APP_SDCARD_ENABLED 1
+
+#define SPI_ENABLED 1
+#define NRFX_SPI_ENABLED 1
+#define NRFX_SPIM_ENABLED 1
+
+#define SPI0_ENABLED 1
+#define SPI0_USE_EASY_DMA 1
+
+#define NRF_SERIAL_ENABLED 1
+#define UART1_ENABLED 1
 #endif

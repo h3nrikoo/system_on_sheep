@@ -70,6 +70,7 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+#include "logger.h"
 
 /*****************************************************************************
  * Macros
@@ -706,6 +707,7 @@ int main(void)
     ble_init();
     scan_init();
     ranging_init();
+    logger_init();
 
     // Start execution.
     NRF_LOG_INFO("RTT Ranging Client started.");
@@ -718,5 +720,6 @@ int main(void)
     {
         rttr_helper_start_check(&m_rttr);
         idle_state_handle();
+        logger_process();
     }
 }
