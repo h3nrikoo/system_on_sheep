@@ -287,7 +287,8 @@ void save_log() {
 void logger_log_tag(m_tag_reading_t reading) {
     if (logger.num_tag_readings < LOGGER_MAX_TAG_READINGS) {
         reading.reading_number = logger.total_readings;
-        reading.gps_delay = app_timer_cnt_diff_compute(app_timer_cnt_get(), logger.gps_time);
+        uint32_t gps_delay = app_timer_cnt_diff_compute(app_timer_cnt_get(), logger.gps_time);
+        reading.gps_delay = gps_delay*1000*(APP_TIMER_CONFIG_RTC_FREQUENCY + 1 ) / APP_TIMER_CLOCK_FREQ; //ms 
         logger.tag_readings[logger.num_tag_readings] = reading;
         logger.num_tag_readings++;
         logger.total_readings++;

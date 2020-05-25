@@ -86,7 +86,7 @@
 #define SCAN_INTERVAL                   MSEC_TO_UNITS(2000, UNIT_0_625_MS)  /**< Determines scan interval in units of 0.625 millisecond. */
 #define SCAN_WINDOW                     MSEC_TO_UNITS(2000, UNIT_0_625_MS)  /**< Determines scan window in units of 0.625 millisecond. */
 #define SCAN_DURATION                   0x0000                              /**< Timeout when scanning. 0x0000 disables timeout. */
-#define TRY_CONN_TIMEOUT                MSEC_TO_UNITS(1200, UNIT_10_MS)    /**< Timeout when scanning. 0x0000 disables timeout. */
+#define TRY_CONN_TIMEOUT                MSEC_TO_UNITS(1300, UNIT_10_MS)    /**< Timeout when scanning. 0x0000 disables timeout. */
 
 #define MIN_CONNECTION_INTERVAL         MSEC_TO_UNITS(7.5, UNIT_1_25_MS)    /**< Determines minimum connection interval in milliseconds. */
 #define MAX_CONNECTION_INTERVAL         MSEC_TO_UNITS(30, UNIT_1_25_MS)     /**< Determines maximum connection interval in milliseconds. */
@@ -669,7 +669,6 @@ static void log_ranging_stats(int32_t * p_samples, int8_t * p_rssi_samples, uint
         //FIXME : add logging of count, expected count,  
         for (int i = 0; i < count; i++)
         {
-            NRF_LOG_INFO("Tag_id: %i, Packet_num: %i/%i, clk_ticks: %i, rssi: %i",tag_id, i, count, p_samples[i], p_rssi_samples[i]); 
            reading.p_samples[i] = p_samples[i];
            reading.p_rssi_samples[i] = p_rssi_samples[i];
         }
