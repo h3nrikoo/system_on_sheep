@@ -76,7 +76,7 @@
 /*****************************************************************************
  * Macros
  *****************************************************************************/
-#define ADVERTISING_INTERVAL_MS         5000
+#define ADVERTISING_INTERVAL_MS         1000
 #define APP_COMPANY_IDENTIFIER          0xBAAA                                              /**< Identifier for sheep tags */
 #define DEVICE_ID                       123                                                 /**< ID of specific tag that is advertised in an adv packet */
                                                                                             

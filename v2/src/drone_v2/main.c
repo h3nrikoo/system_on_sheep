@@ -75,7 +75,7 @@
  * Macros
  *****************************************************************************/
 
-#define MAX_RTT_SAMPLE_COUNT            128                                 /**< RTT Ranging measurement count. */
+#define MAX_RTT_SAMPLE_COUNT            64                                 /**< RTT Ranging measurement count. */
 
 #define APP_COMPANY_IDENTIFIER          0xFFAABA                            /**< Identifier for sheep tags */
 
@@ -85,7 +85,7 @@
 #define SCAN_INTERVAL                   MSEC_TO_UNITS(2000, UNIT_0_625_MS)  /**< Determines scan interval in units of 0.625 millisecond. */
 #define SCAN_WINDOW                     MSEC_TO_UNITS(2000, UNIT_0_625_MS)  /**< Determines scan window in units of 0.625 millisecond. */
 #define SCAN_DURATION                   0x0000                              /**< Timeout when scanning. 0x0000 disables timeout. */
-#define TRY_CONN_TIMEOUT                MSEC_TO_UNITS(5200, UNIT_10_MS)    /**< Timeout when scanning. 0x0000 disables timeout. */
+#define TRY_CONN_TIMEOUT                MSEC_TO_UNITS(1200, UNIT_10_MS)    /**< Timeout when scanning. 0x0000 disables timeout. */
 
 #define MIN_CONNECTION_INTERVAL         MSEC_TO_UNITS(7.5, UNIT_1_25_MS)    /**< Determines minimum connection interval in milliseconds. */
 #define MAX_CONNECTION_INTERVAL         MSEC_TO_UNITS(30, UNIT_1_25_MS)     /**< Determines maximum connection interval in milliseconds. */
@@ -136,7 +136,9 @@ static ble_gap_conn_params_t m_conn_params = {
 
 RTTR_INITIATOR_HELPER_DEF(m_rttr, APP_BLE_OBSERVER_PRIO);
 static int32_t m_rttr_samples[MAX_RTT_SAMPLE_COUNT];
+static int8_t m_rttr_rssi_samples[MAX_RTT_SAMPLE_COUNT]; 
 static uint16_t m_rttr_packet_count = MAX_RTT_SAMPLE_COUNT;
+static uint8_t device_id; 
 
 /**@brief Buffer where advertising reports will be stored by the SoftDevice. */
 static uint8_t m_scan_buffer_data[BLE_GAP_SCAN_BUFFER_EXTENDED_MIN];
@@ -255,8 +257,8 @@ static void ble_adv_report_handle(ble_gap_evt_t const * p_gap_evt)
     manufacturer_id = manufacturer_id_get(p_adv_report);
     if (manufacturer_id == APP_COMPANY_IDENTIFIER)
     {
-        uint8_t device_id = p_adv_report->data.p_data[7];
-        NRF_LOG_INFO("ID: %i", device_id); 
+        device_id = p_adv_report->data.p_data[7];
+        
 
         continue_scan = false; 
         m_scan_params.timeout = TRY_CONN_TIMEOUT; 
@@ -506,6 +508,7 @@ static void button_event_handler(bsp_event_t event)
                 // Enable ranging
                 err_code = rttr_helper_enable(&m_rttr,
                                               &m_rttr_samples[0],
+                                              &m_rttr_rssi_samples[0],
                                               m_rttr_packet_count);
             }
             else
@@ -623,7 +626,7 @@ static void power_management_init(void)
  * RTT Ranging
  *****************************************************************************/
 
-static void log_ranging_stats(int32_t * p_samples, uint32_t count, uint32_t expected_count)
+static void log_ranging_stats(int32_t * p_samples, int8_t * p_rssi_samples, uint32_t count, uint32_t expected_count, uint8_t tag_id)
 {
     uint32_t err_code;
     float ticks;
@@ -631,7 +634,10 @@ static void log_ranging_stats(int32_t * p_samples, uint32_t count, uint32_t expe
     rttr_stats_report_t report;
 
     if (count > 0)
-    {
+    {  
+        
+        //old logger values - we really only need clk and rssi samples - rest is post processing 
+        /*
         err_code = rttr_stats_calculate(p_samples, count, &report);
         APP_ERROR_CHECK(err_code);
 
@@ -643,6 +649,16 @@ static void log_ranging_stats(int32_t * p_samples, uint32_t count, uint32_t expe
                      NRF_LOG_FLOAT(report.variance));
         NRF_LOG_INFO("Cnt: %d/%d", report.count, expected_count);
         NRF_LOG_INFO("Est. distance: " NRF_LOG_FLOAT_MARKER " m", NRF_LOG_FLOAT(distance));
+        */
+        
+        
+        //temp print clk and rssi samples (NRF_LOG buffer gets full, but all samples are there) 
+        //FIXME : add logging of count, expected count,  
+        for (int i = 0; i < count; i++)
+        {
+            NRF_LOG_INFO("Tag_id: %i, Packet_num: %i/%i, clk_ticks: %i, rssi: %i",tag_id, i, count, p_samples[i], p_rssi_samples[i]); 
+           
+        }
     }
     else
     {
@@ -662,6 +678,7 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
             //err_code = bsp_buttons_enable();
             err_code = rttr_helper_enable(&m_rttr,
                                               &m_rttr_samples[0],
+                                              &m_rttr_rssi_samples[0],
                                               m_rttr_packet_count);
             APP_ERROR_CHECK(err_code);
             break;
@@ -670,7 +687,7 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
         {
             ret_code_t err_code;
             //err_code = bsp_buttons_disable();
-            APP_ERROR_CHECK(err_code);
+            //APP_ERROR_CHECK(err_code);
             break;
         }
         case RTTR_HELPER_EVT_ENABLED:
@@ -699,8 +716,10 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
             bsp_board_led_off(RTTR_ONGOING_LED);
             NRF_LOG_INFO("RTT Ranging finished!");
             log_ranging_stats(p_evt->params.finished.p_samples,
+                              p_evt->params.finished.p_rssi_samples,
                               p_evt->params.finished.count,
-                              p_evt->params.finished.expected_count);
+                              p_evt->params.finished.expected_count,
+                              device_id);
             scan_start_if_no_ranging();
             break;
         }
