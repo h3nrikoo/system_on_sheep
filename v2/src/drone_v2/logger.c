@@ -48,7 +48,7 @@ NRF_BLOCK_DEV_SDC_DEFINE(
 #define SERIAL_FIFO_RX_SIZE         64
 
 #define SERIAL_BUFF_TX_SIZE         1
-#define SERIAL_BUFF_RX_SIZE         32
+#define SERIAL_BUFF_RX_SIZE         1
 NRF_SERIAL_DRV_UART_CONFIG_DEF(m_uarte1_drv_config,
                       ARDUINO_1_PIN, ARDUINO_0_PIN,
                       ARDUINO_2_PIN, ARDUINO_3_PIN,
@@ -84,9 +84,9 @@ void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_serial_event
     {
         case NRF_SERIAL_EVENT_RX_DATA:
         {
-            char c[32];
+            char c[SERIAL_BUFF_RX_SIZE];
             size_t read = 0;
-            ret_code_t ret = nrf_serial_read(p_serial, &c, sizeof(char)*32, &read, 0);
+            ret_code_t ret = nrf_serial_read(p_serial, &c, sizeof(char)*SERIAL_BUFF_RX_SIZE, &read, 0);
             static char a;
             static char b;
             for (size_t i = 0; i < read; i++)
@@ -113,6 +113,8 @@ void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_serial_event
             NRF_LOG_ERROR("NRF_SERIAL_EVENT_DRV_ERR\n");
             nrf_serial_uninit(p_serial);
             serial_init();
+            memset(&line_buffer.lines[line_buffer.end_idx][0], 0, sizeof(line_buffer.lines[line_buffer.end_idx]));
+            nmea_len = 0;
             break;
         }
         default:
@@ -220,7 +222,7 @@ void save_log() {
     }
 
     uint32_t bytes_written;
-    char text_buffer[128] = "";
+    char text_buffer[1024] = "";
     int text_length;
 
     int gps_index = 0;
@@ -232,7 +234,7 @@ void save_log() {
         // Next reading is a GPS reading
         if (gps_index < logger.num_gps_readings && logger.gps_readings[gps_index].reading_number == i) {
             m_gps_reading_t gps_reading = logger.gps_readings[gps_index];
-            text_length = snprintf(text_buffer, 128, 
+            text_length = snprintf(text_buffer, 1024, 
                 "GPS;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s\n",
                 LOGGER_DATE_LEN, gps_reading.date,
                 LOGGER_TIME_LEN, gps_reading.time,
@@ -247,23 +249,36 @@ void save_log() {
             );
 
             gps_index++;
+
+            ff_result = f_write(&file, text_buffer, text_length, &bytes_written);
+            if (ff_result != FR_OK)
+            {
+                NRF_LOG_INFO("Failed file write.");
+            }
         }
 
         // Next reading is a Tag reading
         if (tag_index < logger.num_tag_readings && logger.tag_readings[tag_index].reading_number == i) {
             m_tag_reading_t tag_reading = logger.tag_readings[tag_index];
-            text_length = snprintf(text_buffer, 128, 
-                "TAG;%d\n",
-                tag_reading.tag_id
+            text_length = snprintf(text_buffer, 1024, 
+                "TAG;%d;%d;%d;%d;%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d;%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+                tag_reading.tag_id,
+                tag_reading.gps_delay,
+                tag_reading.packet_count,
+                tag_reading.expected_packet_count,
+                tag_reading.p_samples[0],tag_reading.p_samples[1],tag_reading.p_samples[2],tag_reading.p_samples[3],tag_reading.p_samples[4],tag_reading.p_samples[5],tag_reading.p_samples[6],tag_reading.p_samples[7],tag_reading.p_samples[8],tag_reading.p_samples[9],tag_reading.p_samples[10],tag_reading.p_samples[11],tag_reading.p_samples[12],tag_reading.p_samples[13],tag_reading.p_samples[14],tag_reading.p_samples[15],tag_reading.p_samples[16],tag_reading.p_samples[17],tag_reading.p_samples[18],tag_reading.p_samples[19],tag_reading.p_samples[20],tag_reading.p_samples[21],tag_reading.p_samples[22],tag_reading.p_samples[23],tag_reading.p_samples[24],tag_reading.p_samples[25],tag_reading.p_samples[26],tag_reading.p_samples[27],tag_reading.p_samples[28],tag_reading.p_samples[29],tag_reading.p_samples[30],tag_reading.p_samples[31],tag_reading.p_samples[32],tag_reading.p_samples[33],tag_reading.p_samples[34],tag_reading.p_samples[35],tag_reading.p_samples[36],tag_reading.p_samples[37],tag_reading.p_samples[38],tag_reading.p_samples[39],tag_reading.p_samples[40],tag_reading.p_samples[41],tag_reading.p_samples[42],tag_reading.p_samples[43],tag_reading.p_samples[44],tag_reading.p_samples[45],tag_reading.p_samples[46],tag_reading.p_samples[47],tag_reading.p_samples[48],tag_reading.p_samples[49],tag_reading.p_samples[50],tag_reading.p_samples[51],tag_reading.p_samples[52],tag_reading.p_samples[53],tag_reading.p_samples[54],tag_reading.p_samples[55],tag_reading.p_samples[56],tag_reading.p_samples[57],tag_reading.p_samples[58],tag_reading.p_samples[59],tag_reading.p_samples[60],tag_reading.p_samples[61],tag_reading.p_samples[62],tag_reading.p_samples[63],
+                tag_reading.p_rssi_samples[0],tag_reading.p_rssi_samples[1],tag_reading.p_rssi_samples[2],tag_reading.p_rssi_samples[3],tag_reading.p_rssi_samples[4],tag_reading.p_rssi_samples[5],tag_reading.p_rssi_samples[6],tag_reading.p_rssi_samples[7],tag_reading.p_rssi_samples[8],tag_reading.p_rssi_samples[9],tag_reading.p_rssi_samples[10],tag_reading.p_rssi_samples[11],tag_reading.p_rssi_samples[12],tag_reading.p_rssi_samples[13],tag_reading.p_rssi_samples[14],tag_reading.p_rssi_samples[15],tag_reading.p_rssi_samples[16],tag_reading.p_rssi_samples[17],tag_reading.p_rssi_samples[18],tag_reading.p_rssi_samples[19],tag_reading.p_rssi_samples[20],tag_reading.p_rssi_samples[21],tag_reading.p_rssi_samples[22],tag_reading.p_rssi_samples[23],tag_reading.p_rssi_samples[24],tag_reading.p_rssi_samples[25],tag_reading.p_rssi_samples[26],tag_reading.p_rssi_samples[27],tag_reading.p_rssi_samples[28],tag_reading.p_rssi_samples[29],tag_reading.p_rssi_samples[30],tag_reading.p_rssi_samples[31],tag_reading.p_rssi_samples[32],tag_reading.p_rssi_samples[33],tag_reading.p_rssi_samples[34],tag_reading.p_rssi_samples[35],tag_reading.p_rssi_samples[36],tag_reading.p_rssi_samples[37],tag_reading.p_rssi_samples[38],tag_reading.p_rssi_samples[39],tag_reading.p_rssi_samples[40],tag_reading.p_rssi_samples[41],tag_reading.p_rssi_samples[42],tag_reading.p_rssi_samples[43],tag_reading.p_rssi_samples[44],tag_reading.p_rssi_samples[45],tag_reading.p_rssi_samples[46],tag_reading.p_rssi_samples[47],tag_reading.p_rssi_samples[48],tag_reading.p_rssi_samples[49],tag_reading.p_rssi_samples[50],tag_reading.p_rssi_samples[51],tag_reading.p_rssi_samples[52],tag_reading.p_rssi_samples[53],tag_reading.p_rssi_samples[54],tag_reading.p_rssi_samples[55],tag_reading.p_rssi_samples[56],tag_reading.p_rssi_samples[57],tag_reading.p_rssi_samples[58],tag_reading.p_rssi_samples[59],tag_reading.p_rssi_samples[60],tag_reading.p_rssi_samples[61],tag_reading.p_rssi_samples[62],tag_reading.p_rssi_samples[63]
             );
             tag_index++;
+
+            ff_result = f_write(&file, text_buffer, text_length, &bytes_written);
+            if (ff_result != FR_OK)
+            {
+                NRF_LOG_INFO("Failed file write.");
+            }
         }
 
-        ff_result = f_write(&file, text_buffer, text_length, &bytes_written);
-        if (ff_result != FR_OK)
-        {
-            NRF_LOG_INFO("Failed file write.");
-        }
+        
     }
     clear_log();
     (void) f_close(&file);
@@ -272,6 +287,7 @@ void save_log() {
 void logger_log_tag(m_tag_reading_t reading) {
     if (logger.num_tag_readings < LOGGER_MAX_TAG_READINGS) {
         reading.reading_number = logger.total_readings;
+        reading.gps_delay = app_timer_cnt_diff_compute(app_timer_cnt_get(), logger.gps_time);
         logger.tag_readings[logger.num_tag_readings] = reading;
         logger.num_tag_readings++;
         logger.total_readings++;
@@ -319,8 +335,8 @@ void parse_nmea(char* line) {
         strncpy(&reading.longitude[1], longitude, LOGGER_LONGITUDE_LEN-1);
         strncpy(reading.speed, speed, LOGGER_SPEED_LEN);
         strncpy(reading.course, course, LOGGER_COURSE_LEN);
+        logger.gps_time = app_timer_cnt_get(); 
         log_gps(reading);
-        save_log();
     }
 
     if (!memcmp(line, "$GPGGA", 6)) {
@@ -358,4 +374,8 @@ void logger_process() {
         memset(&line_buffer.lines[line_buffer.start_idx][0], 0, sizeof(line_buffer.lines[line_buffer.start_idx]));
         line_buffer.start_idx = (line_buffer.start_idx + 1) % LINE_BUFFER_LENGTH;
     }
+}
+
+void logger_save() {
+    logger.save_flag = true;
 }

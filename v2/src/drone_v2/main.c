@@ -527,6 +527,12 @@ static void button_event_handler(bsp_event_t event)
             break;
         }
 
+        case BSP_EVENT_KEY_3:
+        {
+            logger_save();
+            break;
+        }
+
         case BSP_EVENT_DISCONNECT:
         {
             if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
@@ -634,6 +640,12 @@ static void log_ranging_stats(int32_t * p_samples, int8_t * p_rssi_samples, uint
     float distance;
     rttr_stats_report_t report;
 
+    m_tag_reading_t reading = {
+        .tag_id = tag_id,
+        .packet_count = count,
+        .expected_packet_count = expected_count
+    };
+
     if (count > 0)
     {  
         
@@ -658,13 +670,16 @@ static void log_ranging_stats(int32_t * p_samples, int8_t * p_rssi_samples, uint
         for (int i = 0; i < count; i++)
         {
             NRF_LOG_INFO("Tag_id: %i, Packet_num: %i/%i, clk_ticks: %i, rssi: %i",tag_id, i, count, p_samples[i], p_rssi_samples[i]); 
-           
+           reading.p_samples[i] = p_samples[i];
+           reading.p_rssi_samples[i] = p_rssi_samples[i];
         }
     }
     else
     {
         NRF_LOG_INFO("No RTT packets received!");
     }
+    
+    logger_log_tag(reading);
 }
 
 

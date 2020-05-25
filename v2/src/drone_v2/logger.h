@@ -35,12 +35,12 @@ typedef struct {
 
 typedef struct {
     int reading_number;
-    uint16_t tag_id;
+    uint8_t tag_id;
     uint16_t gps_delay;
-    int16_t rssi;
-    float distance;
-    float distance_msl;
-    uint16_t distance_packets;
+    uint32_t packet_count;
+    uint32_t expected_packet_count;
+    int32_t p_samples[64];
+    int8_t p_rssi_samples[64];
 } m_tag_reading_t;
 
 typedef struct {
@@ -51,10 +51,12 @@ typedef struct {
     int total_readings;
     int search_number;
     bool save_flag;
+    uint32_t gps_time;
 } m_logger_t;
 
 
 void logger_init();
 void logger_log_tag(m_tag_reading_t reading);
 void logger_process();
+void logger_save();
 #endif //LOGGER_H
