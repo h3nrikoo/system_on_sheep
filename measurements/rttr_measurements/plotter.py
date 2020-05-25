@@ -7,6 +7,8 @@ import math
 import geopy.distance
 pd.set_option('display.max_rows', 10000)
 
+DRONE_HEIGHT = 100 - 1.5
+
 def generate_dataset_gps():
     tx_coord = (63.40742, 10.47752) #ole sine koordinater 
 
@@ -34,7 +36,7 @@ def generate_dataset_gps():
 
     distance_bins = []
     for d in range(0,800,50):
-        distance_bins.append(round(math.sqrt(d*d + 100*100)))
+        distance_bins.append(round(math.sqrt(d*d + DRONE_HEIGHT*DRONE_HEIGHT)))
 
         
     with open('data/raw-combined/Combined.csv') as file:
@@ -54,7 +56,7 @@ def generate_dataset_gps():
                 continue 
 
             gps_coords = convert_coord(values[9], values[10])
-            true_dist = math.floor(math.sqrt((geopy.distance.distance(gps_coords, tx_coord).m)**2 + 100**2))
+            true_dist = math.floor(math.sqrt((geopy.distance.distance(gps_coords, tx_coord).m)**2 + DRONE_HEIGHT**2))
             error = measured_dist - true_dist
 
 
@@ -81,12 +83,14 @@ def generate_dataset_gps():
             measurements.append(measurement)
 
     df = pd.DataFrame(measurements)
-    print(df.head(1000))
     df.to_csv('data/rttr_measurement_dataset.csv', index=False)
 
-# generate_dataset_gps()
+generate_dataset_gps()
 
 df = pd.read_csv('data/rttr_measurement_dataset.csv')
+df = df[df.bin_dist != 608]
+
+print(df.head(1000))
 
 def box_plot(): 
     fig_dims = (16, 9)
@@ -100,7 +104,7 @@ def box_plot():
     plt.show()
 
 def mean_error_line_plot(): 
-    df2 = df.groupby(['bin_dist','num_pkt_tx'])['error'].mean().abs().reset_index()
+    df2 = df.groupby(['bin_dist','num_pkt_tx'])['error'].mean().reset_index()
 
     fig_dims = (16, 9)
     fig, ax = plt.subplots(figsize=fig_dims)
@@ -114,7 +118,7 @@ def mean_error_line_plot():
     plt.show()
 
 def mean_error_bar_plot(): 
-    df2 = df.groupby(['bin_dist','num_pkt_tx'])['error'].mean().abs().reset_index()
+    df2 = df.groupby(['bin_dist','num_pkt_tx'])['error'].mean().reset_index()
 
     fig_dims = (16, 9)
     fig, ax = plt.subplots(figsize=fig_dims)
@@ -156,16 +160,16 @@ def strip_plot():
 
 
     ax.set_xticks(np.arange(-50,61,10))
-    file_name = "figures/combined_box_plot_2.png"
+    file_name = "figures/dunno.png"
     plt.savefig(file_name)
     plt.show()
 
 
 
-# box_plot()
+box_plot()
 mean_error_line_plot() 
-# mean_error_bar_plot()
+mean_error_bar_plot()
 # err_pkt_num_bar_plot(16)
-# combined_boxplot()
+combined_boxplot()
 
 
