@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define LOGGER_MAX_GPS_READINGS 128
-#define LOGGER_MAX_TAG_READINGS 128
+#define LOGGER_MAX_GPS_READINGS 64
+#define LOGGER_MAX_TAG_READINGS 64
 
 #define LOGGER_DATE_LEN 6
 #define LOGGER_TIME_LEN 6
@@ -15,6 +15,9 @@
 #define LOGGER_ALTITUDE_LEN 6
 #define LOGGER_SPEED_LEN 5
 #define LOGGER_COURSE_LEN 5
+#define LOGGER_HDOP_LEN 4
+#define LOGGER_SATELLITES_LEN 2
+#define LOGGER_GEODIAL_SEP_LEN 5
 
 typedef struct {
     int reading_number;
@@ -25,6 +28,9 @@ typedef struct {
     char altitude_msl[LOGGER_ALTITUDE_LEN];
     char speed[LOGGER_SPEED_LEN];
     char course[LOGGER_COURSE_LEN];
+    char hdop[LOGGER_HDOP_LEN];
+    char satellites[LOGGER_SATELLITES_LEN];
+    char geodial_seperation[LOGGER_GEODIAL_SEP_LEN];
 } m_gps_reading_t;
 
 typedef struct {
@@ -49,8 +55,6 @@ typedef struct {
 
 
 void logger_init();
-void logger_start();
-void logger_stop();
 void logger_log_tag(m_tag_reading_t reading);
 void logger_process();
 #endif //LOGGER_H
