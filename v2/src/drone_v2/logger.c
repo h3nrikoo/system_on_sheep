@@ -13,11 +13,12 @@ static FATFS fs;
 static FIL file;
 static m_logger_t logger = {};
 
-static int initialize_sd_card();
+static void initialize_sd_card();
 void initialize_search_number();
-int save_log();
+void save_log();
 void log_gps(m_gps_reading_t reading);
 void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_serial_event_t event);
+void serial_init();
 
 /**
  *  Configure SD Card
@@ -137,7 +138,7 @@ void logger_init() {
     initialize_line_buffer();
 }
 
-static int initialize_sd_card() {
+static void initialize_sd_card() {
     FRESULT ff_result;
     DSTATUS disk_state = STA_NOINIT;
 
@@ -205,7 +206,7 @@ void clear_log() {
     logger.total_readings = 0;
 }
 
-int save_log() {
+void save_log() {
     FRESULT ff_result;
 
     char filename[13];
@@ -232,14 +233,17 @@ int save_log() {
         if (gps_index < logger.num_gps_readings && logger.gps_readings[gps_index].reading_number == i) {
             m_gps_reading_t gps_reading = logger.gps_readings[gps_index];
             text_length = snprintf(text_buffer, 128, 
-                "GPS;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s\n",
+                "GPS;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s;%.*s\n",
                 LOGGER_DATE_LEN, gps_reading.date,
                 LOGGER_TIME_LEN, gps_reading.time,
                 LOGGER_LATITUDE_LEN, gps_reading.latitude,
                 LOGGER_LONGITUDE_LEN, gps_reading.longitude,
                 LOGGER_ALTITUDE_LEN, gps_reading.altitude_msl,
                 LOGGER_SPEED_LEN, gps_reading.speed,
-                LOGGER_COURSE_LEN, gps_reading.course
+                LOGGER_COURSE_LEN, gps_reading.course,
+                LOGGER_HDOP_LEN, gps_reading.hdop,
+                LOGGER_SATELLITES_LEN, gps_reading.satellites,
+                LOGGER_GEODIAL_SEP_LEN, gps_reading.geodial_seperation
             );
 
             gps_index++;
@@ -337,6 +341,9 @@ void parse_nmea(char* line) {
         char* geodial_seperation = strtok(NULL, ",");
         char* geodial_seperation_unit = strtok(NULL, ",");
         strncpy(reading.altitude_msl, altitude_msl, LOGGER_ALTITUDE_LEN);
+        strncpy(reading.hdop, HDOP, LOGGER_HDOP_LEN);
+        strncpy(reading.satellites, satellites, LOGGER_SATELLITES_LEN);
+        strncpy(reading.geodial_seperation, geodial_seperation, LOGGER_GEODIAL_SEP_LEN);
     }
 }
 
