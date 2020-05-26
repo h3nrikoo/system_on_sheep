@@ -78,7 +78,7 @@
  *****************************************************************************/
 #define ADVERTISING_INTERVAL_MS         1000
 #define APP_COMPANY_IDENTIFIER          0xBAAA                                              /**< Identifier for sheep tags */
-#define DEVICE_ID                       123                                                 /**< ID of specific tag that is advertised in an adv packet */
+#define DEVICE_ID                       69                                             /**< ID of specific tag that is advertised in an adv packet */
                                                                                             
 #define APP_BLE_PHY                     BLE_GAP_PHY_CODED                                   /**< The primary PHY used for advertising/connections. */
 #define APP_BLE_TX_POWER                3                                                   /**< The TX power in dBm used for advertising/connections. */
@@ -89,7 +89,7 @@
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)                    /**< Minimum acceptable connection interval (0.5 seconds). */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(200, UNIT_1_25_MS)                    /**< Maximum acceptable connection interval (1 second). */
 #define SLAVE_LATENCY                   0                                                   /**< Slave latency. */
-#define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)                     /**< Connection supervisory time-out (4 seconds). */
+#define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(500, UNIT_10_MS)                     /**< Connection supervisory time-out (4 seconds). */
                                                                                             
 #define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(20000)                              /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (15 seconds). */
 #define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(5000)                               /**< Time between each call to sd_ble_gap_conn_param_update after the first call (5 seconds). */
