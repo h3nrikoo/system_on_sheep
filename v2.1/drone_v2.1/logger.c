@@ -113,11 +113,9 @@ void serial_event_handler(struct nrf_serial_s const * p_serial, nrf_serial_event
         {
             NRF_LOG_ERROR("NRF_SERIAL_EVENT_DRV_ERR\n");
             nrf_serial_uninit(p_serial);
-            /*
             serial_init();
             memset(&line_buffer.lines[line_buffer.end_idx][0], 0, sizeof(line_buffer.lines[line_buffer.end_idx]));
             nmea_len = 0;
-            */
             break;
         }
         default:
