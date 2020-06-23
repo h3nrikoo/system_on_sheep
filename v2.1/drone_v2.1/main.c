@@ -520,6 +520,12 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         {
             conn_rttr_helper_clear(p_gap_evt->conn_handle);
 
+            if (nrf_atflags_get(m_app_flags, APP_FLAG_DB_DISCOVERY_ACTIVE) && m_db_disc.conn_handle == BLE_CONN_HANDLE_INVALID)
+            {
+                // HACK: no event is sent by the DB discovery module if disconnecting during DB discovery
+                nrf_atflags_clear(m_app_flags, APP_FLAG_DB_DISCOVERY_ACTIVE);
+            }
+
             NRF_LOG_INFO("Disconnected (handle: %d).", p_gap_evt->conn_handle);
             scan_start(false);
             break;

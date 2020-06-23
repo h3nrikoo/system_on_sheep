@@ -681,6 +681,12 @@ static void power_management_init(void)
  * RTT Ranging
  *****************************************************************************/
 
+static void log_ranging_stats(uint32_t count, uint32_t expected_count)
+{
+    NRF_LOG_INFO("Cnt: %d/%d", count, expected_count);
+}
+
+
 static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
                                    rttr_helper_evt_t * p_evt)
 {
@@ -703,6 +709,7 @@ static void rttr_helper_evt_handle(rttr_helper_t * p_helper,
         {
             bsp_board_led_off(RTTR_ONGOING_LED);
             NRF_LOG_INFO("RTTR finished!");
+            log_ranging_stats(p_evt->params.finished.count, p_evt->params.finished.expected_count);
             break;
         }
         
